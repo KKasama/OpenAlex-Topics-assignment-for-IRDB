@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Model cache & index (large binary files)
+index/
+data/topics_cache.json
+
+# HuggingFace cache
+.cache/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
