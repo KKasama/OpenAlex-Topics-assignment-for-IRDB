@@ -141,38 +141,58 @@ async def batch_process(
     matcher = _get_matcher()
 
     content = await file.read()
-    text = content.decode("utf-8").strip()
+    print(f"[batch] filename={file.filename!r} size={len(content)} bytes")
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty file received.")
+
+    try:
+        text = content.decode("utf-8").strip()
+    except UnicodeDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Encoding error (use UTF-8): {e}")
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Empty input file.")
+
+    records = []
     try:
         if text.startswith("["):
             records = json.loads(text)
         else:
-            records = [json.loads(line) for line in text.splitlines() if line.strip()]
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
+            for i, line in enumerate(text.split('\n'), 1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    records.append(json.loads(line))
+                except json.JSONDecodeError as e:
+                    print(f"[batch] JSON error at line {i}: {e}")
+                    print(f"[batch] offending line (first 200 chars): {line[:200]!r}")
+                    raise HTTPException(status_code=400, detail=f"Line {i}: invalid JSON — {e}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Parse error: {e}")
 
+    print(f"[batch] parsed {len(records)} records")
     if not records:
-        raise HTTPException(status_code=400, detail="Empty input file.")
-    if len(records) > 5000:
-        raise HTTPException(status_code=400, detail="Maximum 5,000 records per batch.")
+        raise HTTPException(status_code=400, detail="No valid records found.")
 
-    results = matcher.match_batch(records)
-    output_lines = []
-    for record, result in zip(records, results):
-        enriched = {
-            **record,
-            "topic_id": result.topic_id,
-            "topic_name": result.topic_name,
-            "field": result.field,
-            "subfield": result.subfield,
-            "domain": result.domain,
-            "confidence": round(result.confidence, 4),
-            "method": result.method,
-        }
-        output_lines.append(json.dumps(enriched, ensure_ascii=False))
+    def generate():
+        for record, result in zip(records, matcher.match_batch(records)):
+            enriched = {
+                **record,
+                "topic_id": result.topic_id,
+                "topic_name": result.topic_name,
+                "field": result.field,
+                "subfield": result.subfield,
+                "domain": result.domain,
+                "confidence": round(result.confidence, 4),
+                "method": result.method,
+            }
+            yield json.dumps(enriched, ensure_ascii=False) + "\n"
 
-    output = "\n".join(output_lines)
     return StreamingResponse(
-        iter([output]),
+        generate(),
         media_type="application/x-ndjson",
         headers={"Content-Disposition": "attachment; filename=results.jsonl"},
     )

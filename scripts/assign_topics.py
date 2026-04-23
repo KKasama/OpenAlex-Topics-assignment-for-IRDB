@@ -34,7 +34,7 @@ def load_records(path: str | None) -> list[dict]:
     text = text.strip()
     if text.startswith("["):
         return json.loads(text)
-    return [json.loads(line) for line in text.splitlines() if line.strip()]
+    return [json.loads(line) for line in text.split('\n') if line.strip()]
 
 
 def main() -> None:
