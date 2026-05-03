@@ -718,6 +718,21 @@ function renderResult(d) {
 }
 
 // ── Batch ─────────────────────────────────────────────────────
+// Pick the saved filename from the server's Content-Disposition; fall back to
+// "<input-stem>-topics.{csv,jsonl}" so CSV input never gets renamed to .jsonl.
+function downloadFilenameFor(resp, inputFile) {
+  const cd = resp.headers.get('Content-Disposition') || '';
+  const m = cd.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+  if (m && m[1]) {
+    try { return decodeURIComponent(m[1].replace(/"$/, '')); } catch (_) { return m[1].replace(/"$/, ''); }
+  }
+  const name = (inputFile && inputFile.name) || 'results';
+  const stem = name.replace(/\.[^./\\]+$/, '');
+  const isCsv = /\.csv$/i.test(name)
+             || (resp.headers.get('Content-Type') || '').toLowerCase().startsWith('text/csv');
+  return stem + '-topics.' + (isCsv ? 'csv' : 'jsonl');
+}
+
 let selectedFile = null;
 function onFileSelect(input) {
   selectedFile = input.files[0];
@@ -751,7 +766,7 @@ async function runBatch() {
     document.getElementById('batch-status').textContent = t('done_download');
     const blob = await resp.blob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'results.jsonl'; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = downloadFilenameFor(resp, selectedFile); a.click();
     URL.revokeObjectURL(url);
     showToast(t('batch_done_toast'), 'ok');
   } catch(e) {
