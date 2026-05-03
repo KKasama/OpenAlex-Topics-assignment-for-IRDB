@@ -88,9 +88,11 @@ class MatchRequest(BaseModel):
     title: str
     abstract: str = ""
     ndc_codes: list[str] = []
+    language: str | None = None
     model: str = ModelType.MULTILINGUAL_E5.value
     threshold: float = 0.5
     top_k: int = 5
+    japanese_only: bool = True
 
 
 @app.post("/api/match")
@@ -100,6 +102,8 @@ async def match_paper(req: MatchRequest):
         title=req.title,
         abstract=req.abstract,
         ndc_codes=req.ndc_codes or None,
+        language=req.language,
+        japanese_only=req.japanese_only,
     )
     return {
         "topic_id": result.topic_id,
@@ -137,6 +141,7 @@ async def batch_process(
     file: UploadFile = File(...),
     threshold: float = Form(0.5),
     top_k: int = Form(5),
+    japanese_only: bool = Form(True),
 ):
     matcher = _get_matcher()
 
@@ -178,7 +183,13 @@ async def batch_process(
         raise HTTPException(status_code=400, detail="No valid records found.")
 
     def generate():
-        for record, result in zip(records, matcher.match_batch(records)):
+        for record, result in zip(
+            records, matcher.match_batch(records, japanese_only=japanese_only)
+        ):
+            if result.method == "skipped":
+                # Non-Japanese record under JA-only mode: pass through unchanged.
+                yield json.dumps(record, ensure_ascii=False) + "\n"
+                continue
             enriched = {
                 **record,
                 "topic_id": result.topic_id,

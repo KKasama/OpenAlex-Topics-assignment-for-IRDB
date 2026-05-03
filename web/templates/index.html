@@ -97,6 +97,13 @@ select option { background:var(--surface2); }
 .chip-method-ndc_rerank { background:rgba(245,166,35,.1);  color:var(--warn);    border-color:rgba(245,166,35,.3); }
 .chip-method-ndc_fallback { background:rgba(224,95,95,.1); color:var(--danger);  border-color:rgba(224,95,95,.3); }
 .chip-method-none { background:rgba(122,131,153,.1); color:var(--text-muted); border-color:rgba(122,131,153,.3); }
+.chip-method-skipped { background:rgba(122,131,153,.1); color:var(--text-muted); border-color:rgba(122,131,153,.3); }
+
+/* Checkbox row */
+.check-row { display:flex; align-items:center; gap:8px; margin-bottom:18px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; }
+.check-row input[type=checkbox] { width:16px; height:16px; accent-color:var(--accent); cursor:pointer; flex:none; }
+.check-row label { font-size:13px; font-weight:500; color:var(--text); text-transform:none; letter-spacing:0; cursor:pointer; }
+.check-row .hint { font-size:11px; color:var(--text-muted); margin-left:auto; }
 .confidence-row { display:flex; align-items:center; gap:12px; }
 .confidence-label { font-size:12px; color:var(--text-muted); min-width:100px; }
 .confidence-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:6px; overflow:hidden; }
@@ -214,6 +221,12 @@ select option { background:var(--surface2); }
           </div>
         </div>
 
+        <div class="check-row">
+          <input type="checkbox" id="ja-only-single" checked>
+          <label for="ja-only-single" data-i18n="label_ja_only">日本語論文のみ Topic を再割当</label>
+          <span class="hint" data-i18n="hint_ja_only">非日本語はスキップ</span>
+        </div>
+
         <button class="btn btn-primary btn-full" id="match-btn" onclick="matchPaper()">
           <span id="match-icon">🚀</span>
           <span id="match-label" data-i18n="btn_match">トピックを割り当てる</span>
@@ -262,6 +275,12 @@ select option { background:var(--surface2); }
             <label>Top-K</label>
             <input type="text" id="batch-topk" value="5">
           </div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="ja-only-batch" checked>
+          <label for="ja-only-batch" data-i18n="label_ja_only">日本語論文のみ Topic を再割当</label>
+          <span class="hint" data-i18n="hint_ja_only_batch">非日本語はそのまま出力</span>
         </div>
 
         <button class="btn btn-primary btn-full" id="batch-btn" onclick="runBatch()">
@@ -403,6 +422,11 @@ const T = {
     method_ndc_rerank:'📐 NDC再ランク',
     method_ndc_fallback:'📖 NDCフォールバック',
     method_none:     '— 未割り当て',
+    method_skipped:  '⏭️ 非日本語 — スキップ',
+    label_ja_only:   '日本語論文のみ Topic を再割当',
+    hint_ja_only:    '非日本語はスキップ',
+    hint_ja_only_batch:'非日本語はそのまま出力',
+    skipped_msg:     '日本語ではないと判定されたため、Topic は再割当されませんでした。',
     ndc_signal_title:'📖 NDCシグナル',
     err_batch_status:'エラー: ',
   },
@@ -466,6 +490,11 @@ const T = {
     method_ndc_rerank:'📐 NDC Re-rank',
     method_ndc_fallback:'📖 NDC Fallback',
     method_none:     '— Unassigned',
+    method_skipped:  '⏭️ Non-Japanese — skipped',
+    label_ja_only:   'Re-assign topics for Japanese papers only',
+    hint_ja_only:    'Non-Japanese papers are skipped',
+    hint_ja_only_batch:'Non-Japanese rows pass through unchanged',
+    skipped_msg:     'This record was not detected as Japanese; topic was not re-assigned.',
     ndc_signal_title:'📖 NDC Signal',
     err_batch_status:'Error: ',
   }
@@ -616,6 +645,7 @@ async function matchPaper() {
         model: document.getElementById('model').value,
         threshold: parseFloat(document.getElementById('threshold').value) || 0.5,
         top_k: 5,
+        japanese_only: document.getElementById('ja-only-single').checked,
       }),
     });
     if (!resp.ok) { const err = await resp.json(); throw new Error(err.detail || resp.statusText); }
@@ -629,6 +659,16 @@ async function matchPaper() {
 }
 
 function renderResult(d) {
+  if (d.method === 'skipped') {
+    document.getElementById('res-topic-name').textContent = t('skipped_msg');
+    const chips = document.getElementById('res-chips');
+    chips.innerHTML = `<span class="chip chip-method-skipped">${t('method_skipped')}</span>`;
+    document.getElementById('conf-bar').style.width = '0%';
+    document.getElementById('conf-val').textContent = '—';
+    document.getElementById('ndc-signal-block').innerHTML = '';
+    document.getElementById('candidates-list').innerHTML = '';
+    return;
+  }
   document.getElementById('res-topic-name').textContent = d.topic_name || t('unassigned');
   const chips = document.getElementById('res-chips');
   chips.innerHTML = '';
@@ -640,6 +680,7 @@ function renderResult(d) {
     ndc_rerank:   t('method_ndc_rerank'),
     ndc_fallback: t('method_ndc_fallback'),
     none:         t('method_none'),
+    skipped:      t('method_skipped'),
   }[d.method] || d.method;
   chips.innerHTML += `<span class="chip chip-method-${d.method}">${methodLabel}</span>`;
 
@@ -702,6 +743,7 @@ async function runBatch() {
   form.append('file', selectedFile);
   form.append('threshold', document.getElementById('batch-threshold').value || '0.5');
   form.append('top_k', document.getElementById('batch-topk').value || '5');
+  form.append('japanese_only', document.getElementById('ja-only-batch').checked ? 'true' : 'false');
   try {
     const resp = await fetch('/api/batch', { method: 'POST', body: form });
     if (!resp.ok) { const err = await resp.json(); throw new Error(err.detail || resp.statusText); }

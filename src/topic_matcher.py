@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 
 from .embeddings import EmbeddingModel, ModelType
+from .language import is_japanese
 from .ndc_mapping import NDCMapper, NDCMatch
 from .topic_index import TopicIndex, TopicMatch
 
@@ -30,7 +31,7 @@ class AssignmentResult:
     subfield: str
     domain: str
     confidence: float  # cosine similarity [0, 1]
-    method: str        # "embedding" | "ndc_fallback" | "ndc_rerank"
+    method: str        # "embedding" | "ndc_fallback" | "ndc_rerank" | "skipped" | "none"
 
     # Runner-up candidates (embedding top-K)
     candidates: list[TopicMatch] = field(default_factory=list)
@@ -81,7 +82,15 @@ class TopicMatcher:
         title: str,
         abstract: str = "",
         ndc_codes: list[str] | None = None,
+        language: str | None = None,
+        japanese_only: bool = False,
     ) -> AssignmentResult:
+        # Skip non-Japanese records when the caller asked for JA-only mode.
+        # Callers should detect ``method == "skipped"`` and leave the record's
+        # existing topic fields untouched.
+        if japanese_only and not is_japanese(title, abstract, language):
+            return _skipped_result()
+
         # Step 1: embedding-based retrieval
         query_vec = self.model.encode_paper(title, abstract)
         candidates = self.index.query(query_vec, top_k=self.top_k)
@@ -124,9 +133,11 @@ class TopicMatcher:
         self,
         papers: list[dict],
         show_progress: bool = False,
+        japanese_only: bool = False,
     ) -> list[AssignmentResult]:
         """
-        papers: list of dicts with keys: title, abstract (opt), ndc_codes (opt)
+        papers: list of dicts with keys: title, abstract (opt), ndc_codes (opt),
+                language (opt — used for Japanese-only filtering).
         """
         results = []
         iterator = papers
@@ -139,6 +150,8 @@ class TopicMatcher:
                     title=paper.get("title", ""),
                     abstract=paper.get("abstract", ""),
                     ndc_codes=paper.get("ndc_codes"),
+                    language=paper.get("language"),
+                    japanese_only=japanese_only,
                 )
             )
         return results
@@ -195,4 +208,17 @@ def _empty_result(candidates: list[TopicMatch], ndc_match: NDCMatch | None) -> A
         method="none",
         candidates=candidates,
         ndc_match=ndc_match,
+    )
+
+
+def _skipped_result() -> AssignmentResult:
+    """Sentinel result for records skipped under Japanese-only mode."""
+    return AssignmentResult(
+        topic_id="",
+        topic_name="",
+        field="",
+        subfield="",
+        domain="",
+        confidence=0.0,
+        method="skipped",
     )

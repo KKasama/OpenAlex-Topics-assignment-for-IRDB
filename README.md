@@ -111,13 +111,31 @@ python scripts/assign_topics.py --index-dir ./index \
 
 ```jsonl
 {"title": "深層学習による画像認識", "abstract": "...", "ndc_codes": ["007", "548"]}
-{"title": "日本の農業生産性に関する研究", "ndc_codes": ["610"]}
-{"title": "First M87 Event Horizon Telescope Results", "abstract": "..."}
+{"title": "日本の農業生産性に関する研究", "ndc_codes": ["610"], "language": "ja"}
+{"title": "First M87 Event Horizon Telescope Results", "abstract": "...", "language": "eng"}
 ```
+
+The optional `language` field (e.g. `"ja"`, `"jpn"`, `"eng"`) is honored when
+present; otherwise language is inferred from kana / CJK characters in the title
+and abstract.
+
+### Japanese-only mode (default)
+
+By default, only Japanese records are re-assigned. Non-Japanese records pass
+through unchanged so existing OpenAlex Topic assignments are preserved. To
+process every record regardless of language, pass `--no-japanese-only`:
+
+```bash
+python scripts/assign_topics.py --index-dir ./index \
+  --input records.jsonl --output results.jsonl --no-japanese-only
+```
+
+The web UI exposes the same toggle on the Single Paper and Batch tabs.
 
 ### Output format
 
-Each record is enriched with:
+Japanese records are enriched with the following added fields. Non-Japanese
+records are written through unchanged.
 
 ```json
 {
