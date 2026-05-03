@@ -97,6 +97,13 @@ select option { background:var(--surface2); }
 .chip-method-ndc_rerank { background:rgba(245,166,35,.1);  color:var(--warn);    border-color:rgba(245,166,35,.3); }
 .chip-method-ndc_fallback { background:rgba(224,95,95,.1); color:var(--danger);  border-color:rgba(224,95,95,.3); }
 .chip-method-none { background:rgba(122,131,153,.1); color:var(--text-muted); border-color:rgba(122,131,153,.3); }
+.chip-method-skipped { background:rgba(122,131,153,.1); color:var(--text-muted); border-color:rgba(122,131,153,.3); }
+
+/* Checkbox row */
+.check-row { display:flex; align-items:center; gap:8px; margin-bottom:18px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; }
+.check-row input[type=checkbox] { width:16px; height:16px; accent-color:var(--accent); cursor:pointer; flex:none; }
+.check-row label { font-size:13px; font-weight:500; color:var(--text); text-transform:none; letter-spacing:0; cursor:pointer; }
+.check-row .hint { font-size:11px; color:var(--text-muted); margin-left:auto; }
 .confidence-row { display:flex; align-items:center; gap:12px; }
 .confidence-label { font-size:12px; color:var(--text-muted); min-width:100px; }
 .confidence-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:6px; overflow:hidden; }
@@ -214,6 +221,12 @@ select option { background:var(--surface2); }
           </div>
         </div>
 
+        <div class="check-row">
+          <input type="checkbox" id="ja-only-single" checked>
+          <label for="ja-only-single" data-i18n="label_ja_only">日本語論文のみ Topic を再割当</label>
+          <span class="hint" data-i18n="hint_ja_only">非日本語はスキップ</span>
+        </div>
+
         <button class="btn btn-primary btn-full" id="match-btn" onclick="matchPaper()">
           <span id="match-icon">🚀</span>
           <span id="match-label" data-i18n="btn_match">トピックを割り当てる</span>
@@ -248,10 +261,10 @@ select option { background:var(--surface2); }
         <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
           <div class="dropzone-icon">📄</div>
           <div class="dropzone-text"><strong data-i18n="drop_click">クリックしてファイルを選択</strong><span data-i18n="drop_or">、またはドラッグ＆ドロップ</span></div>
-          <div class="dropzone-text">.jsonl / .json</div>
+          <div class="dropzone-text">.jsonl / .json / .csv</div>
           <div class="file-name" id="file-name-display"></div>
         </div>
-        <input type="file" id="file-input" accept=".jsonl,.json" style="display:none" onchange="onFileSelect(this)">
+        <input type="file" id="file-input" accept=".jsonl,.json,.csv" style="display:none" onchange="onFileSelect(this)">
 
         <div class="form-row" style="margin-bottom:20px">
           <div class="form-group" style="margin-bottom:0">
@@ -262,6 +275,12 @@ select option { background:var(--surface2); }
             <label>Top-K</label>
             <input type="text" id="batch-topk" value="5">
           </div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="ja-only-batch" checked>
+          <label for="ja-only-batch" data-i18n="label_ja_only">日本語論文のみ Topic を再割当</label>
+          <span class="hint" data-i18n="hint_ja_only_batch">非日本語はそのまま出力</span>
         </div>
 
         <button class="btn btn-primary btn-full" id="batch-btn" onclick="runBatch()">
@@ -368,7 +387,7 @@ const T = {
     confidence_label:'信頼度スコア',
     candidates_title:'上位候補（Top-K）',
     batch_title:     'バッチ処理',
-    batch_desc:      'JSONL形式（1行1レコード）またはJSON配列ファイルをアップロードしてください。各レコードに <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code>（任意）、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code>（任意）を含められます。最大5,000件。',
+    batch_desc:      'JSONL / JSON、または OpenAlex Works CSV エクスポートをアップロードしてください。CSV の場合は <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">display_name</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code> 列を自動認識します。JSONL の場合は <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code>（任意）、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code>（任意）、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code>（任意）。最大5,000件。',
     drop_click:      'クリックしてファイルを選択',
     drop_or:         '、またはドラッグ＆ドロップ',
     btn_batch:       '処理を開始してダウンロード',
@@ -403,6 +422,11 @@ const T = {
     method_ndc_rerank:'📐 NDC再ランク',
     method_ndc_fallback:'📖 NDCフォールバック',
     method_none:     '— 未割り当て',
+    method_skipped:  '⏭️ 非日本語 — スキップ',
+    label_ja_only:   '日本語論文のみ Topic を再割当',
+    hint_ja_only:    '非日本語はスキップ',
+    hint_ja_only_batch:'非日本語はそのまま出力',
+    skipped_msg:     '日本語ではないと判定されたため、Topic は再割当されませんでした。',
     ndc_signal_title:'📖 NDCシグナル',
     err_batch_status:'エラー: ',
   },
@@ -431,7 +455,7 @@ const T = {
     confidence_label:'Confidence Score',
     candidates_title:'Top-K Candidates',
     batch_title:     'Batch Processing',
-    batch_desc:      'Upload a JSONL file (one record per line) or a JSON array. Each record may include <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code> (optional), and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code> (optional). Max 5,000 records.',
+    batch_desc:      'Upload a JSONL / JSON file or an OpenAlex Works CSV export. For CSV, the columns <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">display_name</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code> and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code> are auto-detected. For JSONL each record may include <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code> (optional), <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code> (optional), and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code> (optional). Max 5,000 records.',
     drop_click:      'Click to select a file',
     drop_or:         ' or drag & drop',
     btn_batch:       'Process & Download',
@@ -466,6 +490,11 @@ const T = {
     method_ndc_rerank:'📐 NDC Re-rank',
     method_ndc_fallback:'📖 NDC Fallback',
     method_none:     '— Unassigned',
+    method_skipped:  '⏭️ Non-Japanese — skipped',
+    label_ja_only:   'Re-assign topics for Japanese papers only',
+    hint_ja_only:    'Non-Japanese papers are skipped',
+    hint_ja_only_batch:'Non-Japanese rows pass through unchanged',
+    skipped_msg:     'This record was not detected as Japanese; topic was not re-assigned.',
     ndc_signal_title:'📖 NDC Signal',
     err_batch_status:'Error: ',
   }
@@ -616,6 +645,7 @@ async function matchPaper() {
         model: document.getElementById('model').value,
         threshold: parseFloat(document.getElementById('threshold').value) || 0.5,
         top_k: 5,
+        japanese_only: document.getElementById('ja-only-single').checked,
       }),
     });
     if (!resp.ok) { const err = await resp.json(); throw new Error(err.detail || resp.statusText); }
@@ -629,6 +659,16 @@ async function matchPaper() {
 }
 
 function renderResult(d) {
+  if (d.method === 'skipped') {
+    document.getElementById('res-topic-name').textContent = t('skipped_msg');
+    const chips = document.getElementById('res-chips');
+    chips.innerHTML = `<span class="chip chip-method-skipped">${t('method_skipped')}</span>`;
+    document.getElementById('conf-bar').style.width = '0%';
+    document.getElementById('conf-val').textContent = '—';
+    document.getElementById('ndc-signal-block').innerHTML = '';
+    document.getElementById('candidates-list').innerHTML = '';
+    return;
+  }
   document.getElementById('res-topic-name').textContent = d.topic_name || t('unassigned');
   const chips = document.getElementById('res-chips');
   chips.innerHTML = '';
@@ -640,6 +680,7 @@ function renderResult(d) {
     ndc_rerank:   t('method_ndc_rerank'),
     ndc_fallback: t('method_ndc_fallback'),
     none:         t('method_none'),
+    skipped:      t('method_skipped'),
   }[d.method] || d.method;
   chips.innerHTML += `<span class="chip chip-method-${d.method}">${methodLabel}</span>`;
 
@@ -702,6 +743,7 @@ async function runBatch() {
   form.append('file', selectedFile);
   form.append('threshold', document.getElementById('batch-threshold').value || '0.5');
   form.append('top_k', document.getElementById('batch-topk').value || '5');
+  form.append('japanese_only', document.getElementById('ja-only-batch').checked ? 'true' : 'false');
   try {
     const resp = await fetch('/api/batch', { method: 'POST', body: form });
     if (!resp.ok) { const err = await resp.json(); throw new Error(err.detail || resp.statusText); }
