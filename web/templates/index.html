@@ -261,10 +261,10 @@ select option { background:var(--surface2); }
         <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
           <div class="dropzone-icon">📄</div>
           <div class="dropzone-text"><strong data-i18n="drop_click">クリックしてファイルを選択</strong><span data-i18n="drop_or">、またはドラッグ＆ドロップ</span></div>
-          <div class="dropzone-text">.jsonl / .json</div>
+          <div class="dropzone-text">.jsonl / .json / .csv</div>
           <div class="file-name" id="file-name-display"></div>
         </div>
-        <input type="file" id="file-input" accept=".jsonl,.json" style="display:none" onchange="onFileSelect(this)">
+        <input type="file" id="file-input" accept=".jsonl,.json,.csv" style="display:none" onchange="onFileSelect(this)">
 
         <div class="form-row" style="margin-bottom:20px">
           <div class="form-group" style="margin-bottom:0">
@@ -387,7 +387,7 @@ const T = {
     confidence_label:'信頼度スコア',
     candidates_title:'上位候補（Top-K）',
     batch_title:     'バッチ処理',
-    batch_desc:      'JSONL形式（1行1レコード）またはJSON配列ファイルをアップロードしてください。各レコードに <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code>（任意）、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code>（任意）を含められます。最大5,000件。',
+    batch_desc:      'JSONL / JSON、または OpenAlex Works CSV エクスポートをアップロードしてください。CSV の場合は <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">display_name</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code> 列を自動認識します。JSONL の場合は <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code>（任意）、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code>（任意）、<code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code>（任意）。最大5,000件。',
     drop_click:      'クリックしてファイルを選択',
     drop_or:         '、またはドラッグ＆ドロップ',
     btn_batch:       '処理を開始してダウンロード',
@@ -455,7 +455,7 @@ const T = {
     confidence_label:'Confidence Score',
     candidates_title:'Top-K Candidates',
     batch_title:     'Batch Processing',
-    batch_desc:      'Upload a JSONL file (one record per line) or a JSON array. Each record may include <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code> (optional), and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code> (optional). Max 5,000 records.',
+    batch_desc:      'Upload a JSONL / JSON file or an OpenAlex Works CSV export. For CSV, the columns <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">display_name</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code> and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code> are auto-detected. For JSONL each record may include <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">title</code>, <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">abstract</code> (optional), <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">ndc_codes</code> (optional), and <code style="background:var(--surface2);padding:1px 5px;border-radius:3px">language</code> (optional). Max 5,000 records.',
     drop_click:      'Click to select a file',
     drop_or:         ' or drag & drop',
     btn_batch:       'Process & Download',

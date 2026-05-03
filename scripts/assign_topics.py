@@ -2,8 +2,16 @@
 """
 Assign OpenAlex Topics to IRDB records.
 
-Input JSON format (one object per line or a JSON array):
+Input formats (auto-detected by extension):
+
+* **JSONL / JSON** — one object per line (or a JSON array):
     {"title": "...", "abstract": "...", "ndc_codes": ["510", "548"], "language": "ja"}
+
+* **OpenAlex Works CSV** — the flat CSV export from openalex.org. The columns
+  ``display_name``, ``abstract`` and ``language`` are mapped automatically;
+  the original columns are preserved on output and the new Topic columns
+  (``topic_id``, ``topic_name``, ``field``, ``subfield``, ``domain``,
+  ``confidence``, ``method``) are appended.
 
 By default only Japanese records are re-assigned (the program is targeted at
 fixing Topic mis-assignments for Japanese IRDB records). Non-Japanese records
@@ -40,15 +48,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.embeddings import ModelType
+from src.io_adapters import (
+    csv_text_to_records,
+    enrich_row,
+    is_csv_filename,
+    jsonl_text_to_records,
+    write_csv_rows,
+)
 from src.topic_matcher import TopicMatcher
 
 
 def load_records(path: str | None) -> list[dict]:
     text = Path(path).read_text() if path else sys.stdin.read()
-    text = text.strip()
-    if text.startswith("["):
-        return json.loads(text)
-    return [json.loads(line) for line in text.split('\n') if line.strip()]
+    return jsonl_text_to_records(text)
 
 
 def main() -> None:
@@ -74,7 +86,6 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    records = load_records(args.input)
     matcher = TopicMatcher.load(
         index_dir=args.index_dir,
         model_type=args.model,
@@ -82,6 +93,39 @@ def main() -> None:
         top_k=args.top_k,
     )
 
+    csv_mode = is_csv_filename(args.input) or is_csv_filename(args.output)
+    if csv_mode:
+        if not args.input:
+            print("CSV mode requires --input", file=sys.stderr)
+            sys.exit(2)
+        text = Path(args.input).read_text()
+        matcher_inputs, original_rows, fieldnames = csv_text_to_records(text)
+        results = matcher.match_batch(
+            matcher_inputs,
+            show_progress=True,
+            japanese_only=args.japanese_only,
+        )
+        skipped = 0
+        merged: list[dict] = []
+        for original, result in zip(original_rows, results):
+            is_skipped = result.method == "skipped"
+            if is_skipped:
+                skipped += 1
+            merged.append(enrich_row(original, result, skipped=is_skipped))
+
+        out_path = args.output or args.input.rsplit(".", 1)[0] + "-topics.csv"
+        with open(out_path, "w", newline="", encoding="utf-8") as f:
+            for chunk in write_csv_rows(fieldnames, merged):
+                f.write(chunk)
+        print(
+            f"Wrote {len(merged)} rows to {out_path} "
+            f"(reassigned {len(merged) - skipped}, skipped {skipped} non-Japanese)",
+            file=sys.stderr,
+        )
+        return
+
+    # JSONL / JSON path.
+    records = load_records(args.input)
     out_lines = []
     skipped = 0
     results = matcher.match_batch(

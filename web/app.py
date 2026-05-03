@@ -20,6 +20,13 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.embeddings import EmbeddingModel, ModelType
+from src.io_adapters import (
+    csv_text_to_records,
+    enrich_row,
+    is_csv_filename,
+    jsonl_text_to_records,
+    write_csv_rows,
+)
 from src.ndc_mapping import NDCMapper
 from src.topic_index import TopicIndex
 from src.topic_matcher import TopicMatcher
@@ -158,23 +165,49 @@ async def batch_process(
     if not text:
         raise HTTPException(status_code=400, detail="Empty input file.")
 
-    records = []
-    try:
-        if text.startswith("["):
-            records = json.loads(text)
+    csv_mode = is_csv_filename(file.filename)
+
+    if csv_mode:
+        try:
+            matcher_inputs, original_rows, fieldnames = csv_text_to_records(text)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"CSV parse error: {e}")
+        print(f"[batch] parsed {len(matcher_inputs)} CSV records")
+        if not matcher_inputs:
+            raise HTTPException(status_code=400, detail="No valid CSV records found.")
+
+        def generate_csv():
+            results_iter = matcher.match_batch(
+                matcher_inputs, japanese_only=japanese_only
+            )
+
+            def merged_rows():
+                for original, result in zip(original_rows, results_iter):
+                    yield enrich_row(
+                        original, result, skipped=(result.method == "skipped")
+                    )
+
+            yield from write_csv_rows(fieldnames, merged_rows())
+
+        out_name = (file.filename or "results.csv").rsplit("/", 1)[-1]
+        if not out_name.lower().endswith(".csv"):
+            out_name = "results.csv"
         else:
-            for i, line in enumerate(text.split('\n'), 1):
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    records.append(json.loads(line))
-                except json.JSONDecodeError as e:
-                    print(f"[batch] JSON error at line {i}: {e}")
-                    print(f"[batch] offending line (first 200 chars): {line[:200]!r}")
-                    raise HTTPException(status_code=400, detail=f"Line {i}: invalid JSON — {e}")
-    except HTTPException:
-        raise
+            out_name = out_name.rsplit(".", 1)[0] + "-topics.csv"
+        return StreamingResponse(
+            generate_csv(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={out_name}"},
+        )
+
+    # JSONL / JSON path.
+    try:
+        records = jsonl_text_to_records(text)
+    except ValueError as e:
+        # Preserve the existing diagnostic so users see the offending line.
+        msg = str(e)
+        print(f"[batch] {msg}")
+        raise HTTPException(status_code=400, detail=msg)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Parse error: {e}")
 
