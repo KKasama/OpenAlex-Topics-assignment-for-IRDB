@@ -75,6 +75,7 @@ from src.topic_matcher import TopicMatcher
 
 MINIMAL_FIELDS = ("work_id", "topic_id", "topic_name", "confidence", "method")
 PROGRESS_EVERY = 1000
+CHUNK_SIZE = 256  # records encoded + queried in one batched pass
 
 
 def _iter_jsonl_lines(path: str | None):
@@ -148,6 +149,31 @@ def _full_row(record: dict, result) -> dict:
     }
 
 
+def _flush_chunk(
+    chunk: list[dict],
+    matcher,
+    out_stream,
+    *,
+    japanese_only: bool,
+    minimal: bool,
+) -> tuple[int, int]:
+    """Match a chunk in one batched pass and write results. Returns (written, skipped)."""
+    results = matcher.match_many(chunk, japanese_only=japanese_only)
+    written = 0
+    skipped = 0
+    for record, result in zip(chunk, results):
+        if result.method == "skipped":
+            skipped += 1
+            if not minimal:
+                out_stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+                written += 1
+            continue
+        row = _minimal_row(record, result) if minimal else _full_row(record, result)
+        out_stream.write(json.dumps(row, ensure_ascii=False) + "\n")
+        written += 1
+    return written, skipped
+
+
 def _process_jsonl(args, matcher) -> None:
     out_stream: io.IOBase
     if args.output:
@@ -159,35 +185,38 @@ def _process_jsonl(args, matcher) -> None:
     written = 0
     skipped = 0
     processed = 0
+    chunk: list[dict] = []
     start = time.time()
     try:
         for _, record in _iter_jsonl_lines(args.input):
+            chunk.append(record)
             processed += 1
-            result = matcher.match(
-                title=record.get("title", ""),
-                abstract=record.get("abstract", ""),
-                ndc_codes=record.get("ndc_codes"),
-                language=record.get("language"),
-                japanese_only=args.japanese_only,
-            )
-            if result.method == "skipped":
-                skipped += 1
-                if not args.minimal:
-                    out_stream.write(json.dumps(record, ensure_ascii=False) + "\n")
-                    written += 1
-                continue
-            row = _minimal_row(record, result) if args.minimal else _full_row(record, result)
-            out_stream.write(json.dumps(row, ensure_ascii=False) + "\n")
-            written += 1
-
-            if processed % PROGRESS_EVERY == 0 and args.output:
-                elapsed = time.time() - start
-                rate = processed / elapsed if elapsed else 0.0
-                print(
-                    f"  processed {processed:,} records "
-                    f"({rate:,.1f}/s, {elapsed/60:.1f} min elapsed)",
-                    file=sys.stderr,
+            if len(chunk) >= CHUNK_SIZE:
+                w, s = _flush_chunk(
+                    chunk, matcher, out_stream,
+                    japanese_only=args.japanese_only,
+                    minimal=args.minimal,
                 )
+                written += w
+                skipped += s
+                chunk = []
+                if processed % PROGRESS_EVERY == 0 and args.output:
+                    elapsed = time.time() - start
+                    rate = processed / elapsed if elapsed else 0.0
+                    print(
+                        f"  processed {processed:,} records "
+                        f"({rate:,.1f}/s, {elapsed/60:.1f} min elapsed)",
+                        file=sys.stderr,
+                    )
+        # Flush leftover.
+        if chunk:
+            w, s = _flush_chunk(
+                chunk, matcher, out_stream,
+                japanese_only=args.japanese_only,
+                minimal=args.minimal,
+            )
+            written += w
+            skipped += s
     finally:
         if args.output:
             out_stream.close()

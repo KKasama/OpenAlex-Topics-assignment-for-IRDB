@@ -85,34 +85,31 @@ class TopicMatcher:
         language: str | None = None,
         japanese_only: bool = False,
     ) -> AssignmentResult:
-        # Skip non-Japanese records when the caller asked for JA-only mode.
-        # Callers should detect ``method == "skipped"`` and leave the record's
-        # existing topic fields untouched.
-        if japanese_only and not is_japanese(title, abstract, language):
-            return _skipped_result()
+        """Match a single paper. Convenience wrapper around :meth:`match_many`."""
+        return self.match_many(
+            [{
+                "title": title,
+                "abstract": abstract,
+                "ndc_codes": ndc_codes,
+                "language": language,
+            }],
+            japanese_only=japanese_only,
+        )[0]
 
-        # Step 1: embedding-based retrieval
-        query_vec = self.model.encode_paper(title, abstract)
-        candidates = self.index.query(query_vec, top_k=self.top_k)
-
-        # Step 2: NDC lookup
-        ndc_match: NDCMatch | None = None
-        if ndc_codes:
-            ndc_match = self.ndc_mapper.best_match(ndc_codes)
-
+    def _finalize(
+        self,
+        candidates: list[TopicMatch],
+        ndc_match: NDCMatch | None,
+    ) -> AssignmentResult:
+        """Apply NDC re-rank / fallback rules to ranked candidates."""
         best = candidates[0] if candidates else None
-
-        # Step 3: decide final assignment
         method = "embedding"
         if best and best.score >= self.confidence_threshold:
-            # High-confidence embedding hit: optionally re-rank using NDC
             if ndc_match:
                 best, method = _rerank_with_ndc(candidates, ndc_match)
         elif ndc_match:
-            # Low-confidence embedding → fall back to NDC
             best = _ndc_as_topic_match(ndc_match)
             method = "ndc_fallback"
-        # else: keep the best embedding match even below threshold
 
         if best is None:
             return _empty_result(candidates, ndc_match)
@@ -129,31 +126,65 @@ class TopicMatcher:
             ndc_match=ndc_match,
         )
 
+    def match_many(
+        self,
+        papers: list[dict],
+        japanese_only: bool = False,
+    ) -> list[AssignmentResult]:
+        """Batched match. All non-skipped papers are encoded in a single
+        :meth:`EmbeddingModel.encode` call and queried against FAISS in one
+        bulk search — drastically faster on GPU/MPS than per-paper calls.
+
+        papers: list of dicts with keys ``title``, ``abstract`` (opt),
+                ``ndc_codes`` (opt), ``language`` (opt).
+        """
+        n = len(papers)
+        out: list[AssignmentResult] = [None] * n  # type: ignore[assignment]
+
+        to_encode_idx: list[int] = []
+        texts: list[str] = []
+        for i, paper in enumerate(papers):
+            title = paper.get("title", "") or ""
+            abstract = paper.get("abstract", "") or ""
+            language = paper.get("language")
+            if japanese_only and not is_japanese(title, abstract, language):
+                out[i] = _skipped_result()
+                continue
+            to_encode_idx.append(i)
+            texts.append(title if not abstract else f"{title} [SEP] {abstract}")
+
+        if texts:
+            query_matrix = self.model.encode(texts, is_query=True)
+            candidates_per_paper = self.index.query_batch(query_matrix, top_k=self.top_k)
+            for j, i in enumerate(to_encode_idx):
+                paper = papers[i]
+                ndc_codes = paper.get("ndc_codes")
+                ndc_match = self.ndc_mapper.best_match(ndc_codes) if ndc_codes else None
+                out[i] = self._finalize(candidates_per_paper[j], ndc_match)
+
+        return out
+
     def match_batch(
         self,
         papers: list[dict],
         show_progress: bool = False,
         japanese_only: bool = False,
+        chunk_size: int = 256,
     ) -> list[AssignmentResult]:
-        """
+        """Match a list of papers in chunked batches (memory-bounded).
+
         papers: list of dicts with keys: title, abstract (opt), ndc_codes (opt),
                 language (opt — used for Japanese-only filtering).
         """
-        results = []
-        iterator = papers
+        results: list[AssignmentResult] = []
+        n_chunks = (len(papers) + chunk_size - 1) // chunk_size
+        iterator = range(0, len(papers), chunk_size)
         if show_progress:
             from tqdm import tqdm
-            iterator = tqdm(papers, desc="Matching topics")
-        for paper in iterator:
-            results.append(
-                self.match(
-                    title=paper.get("title", ""),
-                    abstract=paper.get("abstract", ""),
-                    ndc_codes=paper.get("ndc_codes"),
-                    language=paper.get("language"),
-                    japanese_only=japanese_only,
-                )
-            )
+            iterator = tqdm(iterator, desc="Matching topics", total=n_chunks)
+        for start in iterator:
+            chunk = papers[start : start + chunk_size]
+            results.extend(self.match_many(chunk, japanese_only=japanese_only))
         return results
 
 
