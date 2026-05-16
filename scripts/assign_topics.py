@@ -187,6 +187,7 @@ def _process_jsonl(args, matcher) -> None:
     processed = 0
     chunk: list[dict] = []
     start = time.time()
+    next_log_at = PROGRESS_EVERY  # log every PROGRESS_EVERY processed records
     try:
         for _, record in _iter_jsonl_lines(args.input):
             chunk.append(record)
@@ -200,14 +201,17 @@ def _process_jsonl(args, matcher) -> None:
                 written += w
                 skipped += s
                 chunk = []
-                if processed % PROGRESS_EVERY == 0 and args.output:
+                if processed >= next_log_at and args.output:
                     elapsed = time.time() - start
                     rate = processed / elapsed if elapsed else 0.0
                     print(
                         f"  processed {processed:,} records "
                         f"({rate:,.1f}/s, {elapsed/60:.1f} min elapsed)",
                         file=sys.stderr,
+                        flush=True,
                     )
+                    # Bump to next multiple of PROGRESS_EVERY at or above processed.
+                    next_log_at = ((processed // PROGRESS_EVERY) + 1) * PROGRESS_EVERY
         # Flush leftover.
         if chunk:
             w, s = _flush_chunk(

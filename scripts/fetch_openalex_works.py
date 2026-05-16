@@ -63,24 +63,68 @@ def reconstruct_abstract(inv_index: dict | None) -> str:
     return " ".join(word for _, word in positions)
 
 
-def _request_json(url: str, mailto: str, max_retries: int = 5) -> dict:
-    """GET with simple exponential-backoff retry."""
+def _request_json(url: str, mailto: str, max_retries: int = 20) -> dict:
+    """GET with simple exponential-backoff retry.
+
+    Retries on any transient network failure (HTTPError, URLError,
+    TimeoutError, OSError including ``Network is down`` mid-stream, plus
+    ssl/json decode hiccups) — useful for long-running fetches over hours
+    where laptop sleeps, Wi-Fi drops or transient DNS failures happen.
+
+    HTTP 429 (Too Many Requests) is handled specially:
+      * Honours the server's ``Retry-After`` header when present.
+      * Otherwise waits 60s, then 120s, 240s, 480s, 900s, …, capped at 900s.
+    """
     headers = {"User-Agent": f"irdb-topic-matcher (mailto:{mailto})"}
     req = urllib.request.Request(url, headers=headers)
     delay = 1.0
     last_err: Exception | None = None
+    transient = (
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+        TimeoutError,
+        ConnectionError,
+        OSError,                  # incl. [Errno 50] Network is down
+        json.JSONDecodeError,     # truncated response
+    )
+    rate_limit_delay = 60.0  # initial wait on 429, exponentially backing off
     for attempt in range(max_retries):
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
                 return json.load(resp)
-        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as e:
+        except urllib.error.HTTPError as e:
+            last_err = e
+            if e.code == 429:
+                retry_after = e.headers.get("Retry-After") if e.headers else None
+                wait = rate_limit_delay
+                if retry_after:
+                    try:
+                        wait = max(wait, float(retry_after))
+                    except (TypeError, ValueError):
+                        pass
+                print(
+                    f"  [retry {attempt + 1}/{max_retries}] HTTP 429 — "
+                    f"sleeping {wait:.0f}s (Retry-After={retry_after!r})",
+                    file=sys.stderr,
+                )
+                time.sleep(wait)
+                rate_limit_delay = min(rate_limit_delay * 2, 900.0)
+                continue
+            # Other HTTP errors fall through to generic transient retry.
+            print(
+                f"  [retry {attempt + 1}/{max_retries}] {e!r} — sleeping {delay:.1f}s",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+            delay = min(delay * 2, 60.0)
+        except transient as e:
             last_err = e
             print(
                 f"  [retry {attempt + 1}/{max_retries}] {e!r} — sleeping {delay:.1f}s",
                 file=sys.stderr,
             )
             time.sleep(delay)
-            delay = min(delay * 2, 30.0)
+            delay = min(delay * 2, 60.0)
     raise RuntimeError(f"Failed after {max_retries} retries: {last_err}")
 
 
@@ -92,8 +136,13 @@ def fetch_works(
     limit: int | None = None,
     start_cursor: str = "*",
     cursor_log: Path | None = None,
+    api_key: str | None = None,
 ):
-    """Yield works one at a time using OpenAlex cursor pagination."""
+    """Yield works one at a time using OpenAlex cursor pagination.
+
+    If ``api_key`` is given, requests go through the OpenAlex Premium tier,
+    which has much higher rate limits and bypasses long Retry-After cooldowns.
+    """
     filters = [f"locations.source.id:{source_id}"]
     if language:
         filters.append(f"language:{language}")
@@ -110,6 +159,8 @@ def fetch_works(
             "select": SELECT_FIELDS,
             "mailto": mailto,
         }
+        if api_key:
+            params["api_key"] = api_key
         url = f"{OPENALEX_BASE}?{urllib.parse.urlencode(params)}"
         data = _request_json(url, mailto)
 
@@ -169,7 +220,17 @@ def main() -> None:
                         help="Restart from a saved cursor (see --cursor-log)")
     parser.add_argument("--cursor-log", default=None,
                         help="Path to write the latest cursor — useful for resuming")
+    parser.add_argument("--append", action="store_true",
+                        help="Open --output in append mode (use with --resume-cursor "
+                             "to continue a previously interrupted run into the same file)")
+    parser.add_argument("--api-key", default=None,
+                        help="OpenAlex Premium API key. Falls back to the "
+                             "OPENALEX_API_KEY environment variable if unset. "
+                             "Premium tier bypasses long polite-pool cooldowns.")
     args = parser.parse_args()
+
+    import os
+    api_key = args.api_key or os.environ.get("OPENALEX_API_KEY") or None
 
     language = args.language if args.language else None
     cursor_log = Path(args.cursor_log) if args.cursor_log else None
@@ -177,13 +238,15 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     print(
-        f"Fetching source={args.source_id} language={language!r} → {out_path}",
+        f"Fetching source={args.source_id} language={language!r} → {out_path}"
+        + (" [Premium API key in use]" if api_key else " [polite pool]"),
         file=sys.stderr,
     )
 
     count = 0
     start = time.time()
-    with out_path.open("w", encoding="utf-8") as fout:
+    mode = "a" if args.append else "w"
+    with out_path.open(mode, encoding="utf-8") as fout:
         for work in fetch_works(
             source_id=args.source_id,
             language=language,
@@ -192,6 +255,7 @@ def main() -> None:
             limit=args.limit,
             start_cursor=args.resume_cursor,
             cursor_log=cursor_log,
+            api_key=api_key,
         ):
             fout.write(json.dumps(work, ensure_ascii=False) + "\n")
             count += 1

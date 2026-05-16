@@ -9,7 +9,13 @@ build/
 
 # Model cache & index (large binary files)
 index/
+index-*/
 data/topics_cache.json
+
+# Bulk fetch / topic-assignment outputs (multi-GB JSONL)
+data/*.jsonl
+data/*.cursor.txt
+logs/
 
 # HuggingFace cache
 .cache/
