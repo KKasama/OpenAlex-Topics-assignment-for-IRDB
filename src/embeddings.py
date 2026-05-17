@@ -16,8 +16,28 @@ from transformers import AutoModel, AutoTokenizer
 
 
 class ModelType(str, Enum):
-    MULTILINGUAL_E5 = "intfloat/multilingual-e5-large"
+    MULTILINGUAL_E5 = "intfloat/multilingual-e5-large"          # 560M params, 1024-d
+    MULTILINGUAL_E5_BASE = "intfloat/multilingual-e5-base"      # 278M params, 768-d
+    MULTILINGUAL_E5_SMALL = "intfloat/multilingual-e5-small"    # 118M params, 384-d
     SPECTER2 = "allenai/specter2_base"
+
+
+_E5_MODELS = {
+    ModelType.MULTILINGUAL_E5,
+    ModelType.MULTILINGUAL_E5_BASE,
+    ModelType.MULTILINGUAL_E5_SMALL,
+}
+
+
+def _coerce_model_type(value: Union[ModelType, str]) -> Union[ModelType, str]:
+    """Accept either a ModelType, a value already in the enum, or any
+    Hugging Face model name (passed through verbatim)."""
+    if isinstance(value, ModelType):
+        return value
+    try:
+        return ModelType(value)
+    except ValueError:
+        return value  # arbitrary HF model id — leave as-is
 
 
 def _average_pool(last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
@@ -32,17 +52,26 @@ class EmbeddingModel:
         device: str | None = None,
         batch_size: int = 32,
     ) -> None:
-        self.model_type = ModelType(model_type) if isinstance(model_type, str) else model_type
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.model_type = _coerce_model_type(model_type)
+        if device is None:
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+                # Apple-Silicon GPU. Big speed-up over CPU for batched encoding.
+                device = "mps"
+            else:
+                device = "cpu"
+        self.device = device
         self.batch_size = batch_size
 
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_type.value)
-        self.model = AutoModel.from_pretrained(self.model_type.value).to(self.device)
+        model_name = self.model_type.value if isinstance(self.model_type, ModelType) else self.model_type
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name).to(self.device)
         self.model.eval()
 
     def _prefix(self, is_query: bool) -> str:
-        """multilingual-e5 requires task-specific prefixes."""
-        if self.model_type == ModelType.MULTILINGUAL_E5:
+        """multilingual-e5 family requires task-specific prefixes."""
+        if isinstance(self.model_type, ModelType) and self.model_type in _E5_MODELS:
             return "query: " if is_query else "passage: "
         return ""
 
