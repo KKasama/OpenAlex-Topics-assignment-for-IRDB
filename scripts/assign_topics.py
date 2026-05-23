@@ -149,6 +149,69 @@ def _full_row(record: dict, result) -> dict:
     }
 
 
+def _ordered_topic_objects(result, top_n: int) -> tuple[dict | None, list[dict]]:
+    """Return ``(primary_topic, topics)`` in OpenAlex-aligned shape.
+
+    ``primary_topic`` is the topic chosen by the matcher (which may differ
+    from candidates[0] when NDC re-rank fires). ``topics`` is a list of
+    up to ``top_n`` items, with the primary moved to position 0 so the
+    list mirrors OpenAlex's convention.
+    """
+    candidates = list(getattr(result, "candidates", []) or [])
+
+    # Fallback when no candidates (e.g. ndc_fallback synthesises a topic).
+    if not candidates:
+        topic = {
+            "id": result.topic_id,
+            "display_name": result.topic_name,
+            "score": round(result.confidence, 4),
+        }
+        return (topic if result.topic_id or result.topic_name else None,
+                [topic] if result.topic_id or result.topic_name else [])
+
+    # Reorder so the chosen primary (result.topic_id) is first.
+    if candidates[0].topic_id != result.topic_id:
+        for i, c in enumerate(candidates):
+            if c.topic_id == result.topic_id:
+                candidates.insert(0, candidates.pop(i))
+                break
+
+    topics = [
+        {
+            "id": c.topic_id,
+            "display_name": c.display_name,
+            "score": round(c.score, 4),
+        }
+        for c in candidates[:max(top_n, 1)]
+    ]
+    return (topics[0] if topics else None, topics)
+
+
+def _minimal_row_multi(record: dict, result, top_n: int) -> dict:
+    """OpenAlex-aligned minimal row: work_id + primary_topic + topics + method."""
+    primary, topics = _ordered_topic_objects(result, top_n)
+    return {
+        "work_id": _work_id(record),
+        "primary_topic": primary,
+        "topics": topics,
+        "method": result.method,
+    }
+
+
+def _full_row_multi(record: dict, result, top_n: int) -> dict:
+    """Original record + OpenAlex-aligned ``primary_topic`` / ``topics``."""
+    primary, topics = _ordered_topic_objects(result, top_n)
+    return {
+        **record,
+        "primary_topic": primary,
+        "topics": topics,
+        "field": result.field,
+        "subfield": result.subfield,
+        "domain": result.domain,
+        "method": result.method,
+    }
+
+
 def _flush_chunk(
     chunk: list[dict],
     matcher,
@@ -156,6 +219,8 @@ def _flush_chunk(
     *,
     japanese_only: bool,
     minimal: bool,
+    multi_topic: bool = False,
+    top_n: int = 3,
 ) -> tuple[int, int]:
     """Match a chunk in one batched pass and write results. Returns (written, skipped)."""
     results = matcher.match_many(chunk, japanese_only=japanese_only)
@@ -168,7 +233,14 @@ def _flush_chunk(
                 out_stream.write(json.dumps(record, ensure_ascii=False) + "\n")
                 written += 1
             continue
-        row = _minimal_row(record, result) if minimal else _full_row(record, result)
+        if multi_topic:
+            row = (
+                _minimal_row_multi(record, result, top_n)
+                if minimal
+                else _full_row_multi(record, result, top_n)
+            )
+        else:
+            row = _minimal_row(record, result) if minimal else _full_row(record, result)
         out_stream.write(json.dumps(row, ensure_ascii=False) + "\n")
         written += 1
     return written, skipped
@@ -197,6 +269,8 @@ def _process_jsonl(args, matcher) -> None:
                     chunk, matcher, out_stream,
                     japanese_only=args.japanese_only,
                     minimal=args.minimal,
+                    multi_topic=args.multi_topic,
+                    top_n=args.top_n,
                 )
                 written += w
                 skipped += s
@@ -218,6 +292,8 @@ def _process_jsonl(args, matcher) -> None:
                 chunk, matcher, out_stream,
                 japanese_only=args.japanese_only,
                 minimal=args.minimal,
+                multi_topic=args.multi_topic,
+                top_n=args.top_n,
             )
             written += w
             skipped += s
@@ -242,6 +318,13 @@ def _process_jsonl(args, matcher) -> None:
 def _process_csv(args, matcher) -> None:
     if not args.input:
         print("CSV mode requires --input", file=sys.stderr)
+        sys.exit(2)
+    if args.multi_topic:
+        print(
+            "--multi-topic is not supported for CSV output yet; use JSONL output "
+            "(e.g. --output topics.jsonl) for OpenAlex-aligned schema.",
+            file=sys.stderr,
+        )
         sys.exit(2)
     text = Path(args.input).read_text()
     matcher_inputs, original_rows, fieldnames = csv_text_to_records(text)
@@ -322,7 +405,25 @@ def main() -> None:
         help="Emit only (work_id, topic_id, topic_name, confidence, method). "
              "Non-Japanese records are omitted from the output.",
     )
+    parser.add_argument(
+        "--multi-topic",
+        action="store_true",
+        help="OpenAlex-aligned output with ``primary_topic`` (single) + "
+             "``topics`` (array of up to --top-n). When unset, only the best "
+             "topic is emitted (flat fields, backward compatible).",
+    )
+    parser.add_argument(
+        "--top-n",
+        type=int,
+        default=3,
+        help="When --multi-topic is set, number of topics to emit per record "
+             "(default 3, matching OpenAlex convention). Capped by --top-k.",
+    )
     args = parser.parse_args()
+
+    if args.multi_topic and args.top_n > args.top_k:
+        # Need at least top_n candidates retrieved from FAISS.
+        args.top_k = args.top_n
 
     matcher = TopicMatcher.load(
         index_dir=args.index_dir,
