@@ -97,26 +97,60 @@ data/works-irdb-ja.jsonl  (約 2.5M lines、約 600MB)
    │     - title+abstract を multilingual-e5-base で埋め込み
    │     - FAISS IndexFlatIP で OpenAlex Topics の上位 5 件取得
    │     - NDC 該当があれば re-rank（実 IRDB データではほぼ未付与）
+   │     - primary_topic + topics[3] を OpenAlex Work スキーマで出力
    ▼
-data/topics-irdb-ja.jsonl  (約 2.5M lines、約 400MB、5 列)
+data/topics-irdb-ja-multi.jsonl  (約 2.5M lines、約 700MB、nested 形式)
 ```
 
 ### 4.1 出力フォーマット（JSONL、1 行 1 件）
 
+OpenAlex の Work スキーマに合わせて、`primary_topic`（主トピック）と `topics`（候補配列）の 2 階層で出力します。1 Work あたり通常 3 件の候補 Topic を保持し、`primary_topic` は `topics[0]` と一致します（OpenAlex の慣習に準拠）。
+
 ```json
 {
-  "work_id":   "https://openalex.org/W2781293634",
-  "topic_id":  "https://openalex.org/T10318",
-  "topic_name": "Machine Learning in Healthcare",
-  "confidence": 0.7790,
-  "method":     "embedding"
+  "work_id": "https://openalex.org/W2781293634",
+  "primary_topic": {
+    "id": "https://openalex.org/T10318",
+    "display_name": "Machine Learning in Healthcare",
+    "score": 0.7790
+  },
+  "topics": [
+    { "id": "https://openalex.org/T10318", "display_name": "Machine Learning in Healthcare", "score": 0.7790 },
+    { "id": "https://openalex.org/T11045", "display_name": "Biomedical Text Mining and Ontologies", "score": 0.7621 },
+    { "id": "https://openalex.org/T12503", "display_name": "Clinical Decision Support Systems", "score": 0.7488 }
+  ],
+  "method": "embedding"
 }
 ```
 
 - `work_id` ：OpenAlex Work URL（IRDB Work と一意対応）
-- `topic_id` ／ `topic_name` ：OpenAlex 公式タクソノミーに準拠
-- `confidence` ：埋め込みベクトル間のコサイン類似度 [0, 1]
+- `primary_topic` ／ `topics[]` の `id` ／ `display_name` ：OpenAlex 公式タクソノミーに準拠
+- `score` ：埋め込みベクトル間のコサイン類似度 [0, 1]
 - `method` ：`embedding` ／ `ndc_rerank` ／ `ndc_fallback` ／ `skipped` ／ `none`
+
+### 4.2 複数 Topic 対応（OpenAlex Work スキーマとの互換）
+
+OpenAlex は各 Work に **1 件の `primary_topic` ＋ 通常 3〜5 件の `topics` 配列**を保持しています。本ツールも同じ階層構造で出力するため、OpenAlex / IRDB のいずれの側でもそのまま取り込み・比較が可能です。
+
+実装上のポイント：
+
+- 内部では FAISS で常に上位 5 件の候補を計算（`--top-k 5`、デフォルト）
+- 出力時に `--top-n N` で書き出す件数を制御（デフォルト 3）
+- NDC re-rank で `primary` が `candidates[0]` と入れ替わった場合は、`topics[0]` を新 primary に合わせて並び替え（OpenAlex の慣習に揃える）
+
+### 4.3 後方互換モード（単一 Topic 出力）
+
+`--multi-topic` フラグを付けない場合は従来のフラット形式（`topic_id` / `topic_name` / `confidence` / `method`）で出力されます。既存の取り込みパイプラインを変更せずに使えるよう、後方互換を維持しています。
+
+```json
+{
+  "work_id": "https://openalex.org/W2781293634",
+  "topic_id": "https://openalex.org/T10318",
+  "topic_name": "Machine Learning in Healthcare",
+  "confidence": 0.7790,
+  "method": "embedding"
+}
+```
 
 ---
 
@@ -129,7 +163,7 @@ data/topics-irdb-ja.jsonl  (約 2.5M lines、約 400MB、5 列)
 | 対象件数 | 約 2,499,476 件 |
 | データ取得時間 | 約 3 時間（途中で OpenAlex rate-limit 19 時間を含むため、実所要は別途 OpenAlex Premium API キー利用） |
 | Topic 付与処理時間 | 約 37 時間（Apple Silicon MPS） |
-| 出力サイズ | 約 400 MB（gzip 圧縮で約 80 MB） |
+| 出力サイズ | 単一 Topic 形式：約 400 MB（gzip 約 80 MB）／複数 Topic 形式（primary + topics × 3）：約 700 MB（gzip 約 150 MB） |
 
 ### 5.2 品質指標（1,000 件サンプル基準・本番値は別添ファイル参照）
 
@@ -145,11 +179,15 @@ data/topics-irdb-ja.jsonl  (約 2.5M lines、約 400MB、5 列)
 
 ### 5.3 ユーザ目視の改善例
 
-| Work | 既存 OpenAlex | 本手法 |
-|---|---|---|
-| 言語学・人類学系（Khoisan genealogy） | Blood disorders | Pleistocene-Era Hominins ✓ |
-| 数学・微分幾何 | （概ね妥当） | （概ね妥当） |
-| 内容分析・テキストマイニング | Analytical Chemistry | Statistical Modeling ✓ |
+各 Work に対する複数 Topic 候補（本手法・上位 3 件）の例：
+
+| Work | 既存 OpenAlex の primary | 本手法の primary | 本手法の topics[1] | 本手法の topics[2] |
+|---|---|---|---|---|
+| 言語学・人類学系（Khoisan genealogy） | Blood disorders ✗ | Pleistocene-Era Hominins ✓ | Linguistic Anthropology | Historical Linguistics |
+| 数学・微分幾何 | Advanced Differential Geometry ✓ | Advanced Differential Geometry ✓ | Geometry and complex manifolds | Riemannian Geometry |
+| 内容分析・テキストマイニング | Analytical Chemistry ✗ | Statistical Modeling Techniques ✓ | Computational Text Analysis | Educational Methods Research |
+
+`topics[1]` `topics[2]` のような副次候補も保持することで、IRDB 側で「primary に加えて関連分野でも検索ヒットさせる」用途にも対応可能です。
 
 ---
 
@@ -169,16 +207,40 @@ data/topics-irdb-ja.jsonl  (約 2.5M lines、約 400MB、5 列)
 - **主要スクリプト：**
   - `scripts/fetch_openalex_works.py` ：OpenAlex API からのストリーミング取得（cursor-pagination、Premium キー対応、堅牢な retry／resume）
   - `scripts/build_index.py` ：OpenAlex Topics の FAISS インデックス構築
-  - `scripts/assign_topics.py` ：Topic 再付与の本体（チャンク並列、最小限出力）
+  - `scripts/assign_topics.py` ：Topic 再付与の本体（チャンク並列、OpenAlex Work スキーマ準拠の複数 Topic 出力対応）
+
+### 7.1 標準的な実行コマンド（複数 Topic 出力、OpenAlex スキーマ準拠）
+
+```bash
+# 1. OpenAlex API から IRDB 日本語論文を取得
+python scripts/fetch_openalex_works.py \
+  --mailto your@example.org \
+  --output data/works-irdb-ja.jsonl
+
+# 2. FAISS index を一度構築
+python scripts/build_index.py \
+  --model intfloat/multilingual-e5-base \
+  --index-dir ./index-base \
+  --mailto your@example.org
+
+# 3. Topic を再付与（primary_topic + topics[3] を OpenAlex 互換で出力）
+python scripts/assign_topics.py \
+  --index-dir ./index-base \
+  --model intfloat/multilingual-e5-base \
+  --input  data/works-irdb-ja.jsonl \
+  --output data/topics-irdb-ja-multi.jsonl \
+  --minimal --multi-topic --top-n 3
+```
 
 ---
 
 ## 8. 今後の展開（案）
 
-1. **OpenAlex 側へのフィードバック**：CTO Casey 氏宛に本データを共有
+1. **OpenAlex 側へのフィードバック**：CTO Casey 氏宛に複数 Topic 形式（OpenAlex Work スキーマ準拠）で本データを共有
 2. **他言語ソースへの拡張**：他国の Institutional Repository ソースに同手法を適用（例：韓国、台湾、中国）
-3. **評価データセットの整備**：日本語論文に人手付与の正解 Topic を準備し、各モデルの正答率を定量評価
+3. **評価データセットの整備**：日本語論文に人手付与の正解 Topic を準備し、各モデルの正答率（Top-1 / Top-3 / Top-5）を定量評価
 4. **NII 側での再現／検証の場の設定**：必要に応じてセミナー形式での共有
+5. **IRDB の検索 UI への組み込み検討**：primary_topic に加えて topics[1..2] も検索インデックスに含めることで、副次分野でのヒット率向上が期待できる
 
 ---
 

@@ -24,7 +24,7 @@ OpenAlex は全ての Work（論文）に対して 4,500 件規模のタクソ�
 
 - 対象：IRDB（OpenAlex Source ID `S7407056385`）の日本語論文 **約 2,499,476 件**
 - 手法：日本語に強い多言語埋め込みモデル `intfloat/multilingual-e5-base` でタイトル＋要旨をベクトル化し、OpenAlex の Topics（4,516 件）に対して FAISS による近傍探索でマッチング
-- 出力：JSONL 形式・5 列（`work_id`, `topic_id`, `topic_name`, `confidence`, `method`）
+- 出力：JSONL 形式・**OpenAlex の Work スキーマに準拠**（`primary_topic` 単体 ＋ `topics` 配列 3 件、`method`）
 
 ## ご相談事項
 
