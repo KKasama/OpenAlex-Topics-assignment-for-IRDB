@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>quality-report-1k</title>
+<style>
+@page {
+    size: A4;
+    margin: 18mm 16mm;
+}
+:root {
+    --fg: #1f2328;
+    --muted: #57606a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --bg-soft: #f6f8fa;
+}
+* { box-sizing: border-box; }
+body {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: var(--fg);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+}
+h1, h2, h3, h4 {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, sans-serif;
+    line-height: 1.35;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+}
+h1 {
+    font-size: 22pt;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.3em;
+    margin-top: 0.3em;
+}
+h2 {
+    font-size: 16pt;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25em;
+}
+h3 { font-size: 13pt; }
+h4 { font-size: 11.5pt; color: var(--muted); }
+
+p, ul, ol { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.15em 0; }
+
+code {
+    font-family: "SF Mono", "Menlo", monospace;
+    font-size: 0.9em;
+    background: var(--bg-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 9pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+}
+pre code {
+    background: transparent;
+    padding: 0;
+}
+blockquote {
+    border-left: 4px solid var(--border);
+    padding: 0.2em 0.9em;
+    color: var(--muted);
+    margin: 0.8em 0;
+    background: var(--bg-soft);
+    border-radius: 0 4px 4px 0;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+th, td {
+    border: 1px solid var(--border);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: var(--bg-soft); font-weight: 600; }
+tr:nth-child(even) td { background: #fafbfc; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 1.5em 0; }
+
+/* Print tweaks */
+@media print {
+    body { padding: 0; }
+    h1, h2, h3, h4 { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<h1 id="1000">品質評価レポート（1,000 件サンプル）</h1>
+<h2 id="irdb-openalex-topic-multilingual-e5-base">IRDB 日本語論文への OpenAlex Topic 再付与 — multilingual-e5-base</h2>
+<p><strong>作成日：</strong> 2026 年 5 月 18 日
+<strong>評価対象：</strong> IRDB 日本語論文 1,000 件（OpenAlex Source ID <code>S7407056385</code> から無作為に取得）
+<strong>評価対象ファイル：</strong> <code>data/topics-1k-multi.jsonl</code></p>
+<hr>
+<h2 id="1">1. サマリ</h2>
+<table>
+<thead>
+<tr>
+<th>指標</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>評価件数</td>
+<td>1,000 件</td>
+</tr>
+<tr>
+<td>マッチング方式</td>
+<td>すべて埋め込みベース（<code>method=embedding</code>）</td>
+</tr>
+<tr>
+<td>1 Work あたり Topic 数</td>
+<td><strong>3.00 件</strong>（全件）</td>
+</tr>
+<tr>
+<td>空 topics</td>
+<td>0 件</td>
+</tr>
+<tr>
+<td>NDC fallback 利用</td>
+<td>0 件（IRDB の NDC 付与が疎なため）</td>
+</tr>
+</tbody>
+</table>
+<p>全件で OpenAlex Work スキーマ準拠の <code>primary_topic</code> ＋ <code>topics</code> 配列 3 件が付与されました。</p>
+<hr>
+<h2 id="2-primary-topic">2. Primary Topic スコア分布</h2>
+<table>
+<thead>
+<tr>
+<th>統計量</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>平均</strong></td>
+<td><strong>0.8119</strong></td>
+</tr>
+<tr>
+<td>中央値</td>
+<td>0.8129</td>
+</tr>
+<tr>
+<td>25 パーセンタイル</td>
+<td>0.8016</td>
+</tr>
+<tr>
+<td>75 パーセンタイル</td>
+<td>0.8238</td>
+</tr>
+<tr>
+<td>最小</td>
+<td>0.7529</td>
+</tr>
+<tr>
+<td>最大</td>
+<td>0.8643</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>しきい値</th>
+<th>件率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>score ≥ 0.8</td>
+<td><strong>77.7 %</strong></td>
+</tr>
+<tr>
+<td>score ≥ 0.7</td>
+<td><strong>100.0 %</strong></td>
+</tr>
+<tr>
+<td>score ≥ 0.6</td>
+<td>100.0 %</td>
+</tr>
+<tr>
+<td>score &lt; 0.6</td>
+<td>0.0 %</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>解釈：</strong> すべての Work が confidence 0.7 以上、約 78 % が 0.8 以上で付与されており、低信頼度のレコードは観測されませんでした。閾値 0.5 を下回るものは皆無で、NDC fallback への切替も発生していません。</p>
+</blockquote>
+<hr>
+<h2 id="3-topic-topic">3. Topic カバレッジ（ユニーク Topic 数）</h2>
+<table>
+<thead>
+<tr>
+<th>指標</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary Topic のユニーク数</td>
+<td><strong>640</strong> / 1,000</td>
+</tr>
+<tr>
+<td>全 Topic（top-3 合計）のユニーク数</td>
+<td><strong>1,369</strong></td>
+</tr>
+<tr>
+<td>OpenAlex Topics 総数（タクソノミー）</td>
+<td>4,516</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>解釈：</strong> 1,000 件の論文に対して 640 種類の primary が選ばれており、特定 Topic への偏りは少ない結果です。top-3 では 1,369 種類に分散しており、複数 Topic 構造が副次分野を含む形で機能していることが確認できます。</p>
+</blockquote>
+<hr>
+<h2 id="4-primary-topic-15">4. Primary Topic 上位 15 件</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">件数</th>
+<th>Topic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">24</td>
+<td>Urban and spatial planning</td>
+</tr>
+<tr>
+<td style="text-align: right;">18</td>
+<td>EFL/ESL Teaching and Learning</td>
+</tr>
+<tr>
+<td style="text-align: right;">14</td>
+<td>Forest, Soil, and Plant Ecology in China</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td>Japanese History and Culture</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td>Geometry and complex manifolds</td>
+</tr>
+<tr>
+<td style="text-align: right;">8</td>
+<td>Approximation Theory and Sequence Spaces</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td>Phonetics and Phonology Research</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td>Coding theory and cryptography</td>
+</tr>
+<tr>
+<td style="text-align: right;">7</td>
+<td>Landslides and related hazards</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Swearing, Euphemism, Multilingualism</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Syntax, Semantics, Linguistic Variation</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Fixed Point Theorems Analysis</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Reproductive biology and impacts on aquatic species</td>
+</tr>
+<tr>
+<td style="text-align: right;">6</td>
+<td>Optimization and Variational Analysis</td>
+</tr>
+<tr>
+<td style="text-align: right;">5</td>
+<td>Natural Language Processing Techniques</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>解釈：</strong> 都市計画、英語教育、林学、日本史、数学、言語学、地学、生物学など、IRDB に登録されている多様な日本語研究の分布を反映しています。特に英語教育（EFL/ESL）の上位ランクインは、日本の大学リポジトリの傾向と整合します。</p>
+</blockquote>
+<hr>
+<h2 id="5-method">5. Method 内訳</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: right;">件数</th>
+<th style="text-align: right;">件率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>embedding</td>
+<td style="text-align: right;">1,000</td>
+<td style="text-align: right;">100.0 %</td>
+</tr>
+<tr>
+<td>ndc_rerank</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.0 %</td>
+</tr>
+<tr>
+<td>ndc_fallback</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.0 %</td>
+</tr>
+<tr>
+<td>skipped</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.0 %</td>
+</tr>
+<tr>
+<td>none</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0.0 %</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>解釈：</strong> 入力データの全件が日本語と判定され（<code>japanese_only</code> フィルタを通過）、すべて埋め込みベースの判定が機能しました。NDC コードが付与された Work がほぼ無いため、re-rank および fallback は発生していません。</p>
+</blockquote>
+<hr>
+<h2 id="6">6. 評価ロジックの妥当性</h2>
+<p>スコア（cosine similarity in [0, 1]）は埋め込みベクトル間の意味的類似度であり、<code>primary_topic.score = 0.81</code> は「論文の意味表現が選択された Topic の代表ベクトルに極めて近い」ことを示します。</p>
+<h3 id="_1">スコアの解釈目安</h3>
+<table>
+<thead>
+<tr>
+<th>スコア帯</th>
+<th>解釈</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.85 以上</td>
+<td>非常に強いマッチ</td>
+</tr>
+<tr>
+<td>0.75 〜 0.85</td>
+<td>強いマッチ（本データの主要分布帯）</td>
+</tr>
+<tr>
+<td>0.65 〜 0.75</td>
+<td>中程度のマッチ（境界事例）</td>
+</tr>
+<tr>
+<td>0.65 未満</td>
+<td>弱いマッチ（本データでは観測されず）</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="7">7. 既知の限界</h2>
+<ol>
+<li><strong>抽象不足の Work</strong>：要旨が空または短い古い論文では、タイトルのみでの判定となり、相対的に誤分類リスクが残ります。本サンプルでは全件で score ≥ 0.7 を維持しましたが、本番 2.5M 件では裾の長い分布になる可能性があります。</li>
+<li><strong>本サンプルは無作為</strong>：特定分野に絞った評価ではないため、専門分野（医学・工学・人文系）ごとの精度差は別途の評価が必要です。</li>
+<li><strong>人手付与の正解との照合は未実施</strong>：本レポートはモデルのスコア分布と Topic 多様性のみを評価対象とし、第三者による正解 Topic との比較評価は今後の課題です。</li>
+</ol>
+<hr>
+<h2 id="8">8. 次の評価ステップ（提案）</h2>
+<ol>
+<li><strong>本番 2.5M 件の分布確認</strong>：完了後、本レポートと同じ集計を実施し、低 score 帯の存在を確認</li>
+<li><strong>人手評価セット</strong>：100〜200 件規模で人手で正解 Topic を付け、本手法・既存 OpenAlex の双方を Top-1 / Top-3 精度で比較</li>
+<li><strong>既存 OpenAlex 付与との一致率</strong>：本手法と既存 OpenAlex 付与の field レベル一致率を測定（別添「改善比較表」を参照）</li>
+</ol>
+<hr>
+<p>参考：本レポートは <code>data/topics-1k-multi.jsonl</code> を入力に Python で集計したものです。再現用スクリプトは GitHub リポジトリ（<code>scripts/</code> ディレクトリ）配下に整備予定です。</p>
+</body>
+</html>
