@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>letter-to-takeda-progress</title>
+<style>
+@page {
+    size: A4;
+    margin: 18mm 16mm;
+}
+:root {
+    --fg: #1f2328;
+    --muted: #57606a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --bg-soft: #f6f8fa;
+}
+* { box-sizing: border-box; }
+body {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: var(--fg);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+}
+h1, h2, h3, h4 {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, sans-serif;
+    line-height: 1.35;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+}
+h1 {
+    font-size: 22pt;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.3em;
+    margin-top: 0.3em;
+}
+h2 {
+    font-size: 16pt;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25em;
+}
+h3 { font-size: 13pt; }
+h4 { font-size: 11.5pt; color: var(--muted); }
+
+p, ul, ol { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.15em 0; }
+
+code {
+    font-family: "SF Mono", "Menlo", monospace;
+    font-size: 0.9em;
+    background: var(--bg-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 9pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+}
+pre code {
+    background: transparent;
+    padding: 0;
+}
+blockquote {
+    border-left: 4px solid var(--border);
+    padding: 0.2em 0.9em;
+    color: var(--muted);
+    margin: 0.8em 0;
+    background: var(--bg-soft);
+    border-radius: 0 4px 4px 0;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+th, td {
+    border: 1px solid var(--border);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: var(--bg-soft); font-weight: 600; }
+tr:nth-child(even) td { background: #fafbfc; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 1.5em 0; }
+
+/* Print tweaks */
+@media print {
+    body { padding: 0; }
+    h1, h2, h3, h4 { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<h1 id="_1">武田先生宛 進捗ご連絡メール（下書き）</h1>
+<blockquote>
+<p>Gmail / Outlook 等にコピペしてご利用ください。
+角括弧 <code>[...]</code> は実際の値に差し替えてください。</p>
+</blockquote>
+<hr>
+<p><strong>件名：</strong> IRDB 日本語論文への OpenAlex Topic 再付与 進捗ご報告</p>
+<hr>
+<p>武田先生</p>
+<p>お世話になっております。
+iGroup Japan の笠間でございます。</p>
+<p>先日ご相談申し上げました IRDB 日本語論文に対する OpenAlex Topic 再付与の件、現状をご報告いたします。</p>
+<h2 id="_2">進捗状況</h2>
+<p>これまでの実装では <strong>1 Work につき Topic を 1 件のみ</strong> 出力する仕様でしたが、OpenAlex 本家の Work スキーマは <code>primary_topic</code>（主トピック 1 件）に加えて <code>topics</code> 配列（通常 3 件程度の関連 Topic）を保持しています。</p>
+<p>OpenAlex 側との互換性および IRDB 側での副次分野検索などの活用を考えると <strong>複数 Topic への分類</strong>が望ましいと判断し、出力フォーマットを OpenAlex の Work スキーマに準拠した nested 形式に変更いたしました。</p>
+<p>現在、約 2,499,476 件の日本語論文に対して再付与処理を実行中です。</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>開始</td>
+<td>5/18（本日）11:25</td>
+</tr>
+<tr>
+<td>処理速度（実測）</td>
+<td>約 20.4 works/秒（Apple Silicon MPS）</td>
+</tr>
+<tr>
+<td><strong>完了予定</strong></td>
+<td><strong>5/19（明日）21:30 頃</strong></td>
+</tr>
+<tr>
+<td>出力ファイル</td>
+<td>JSONL 形式 約 700 MB</td>
+</tr>
+</tbody>
+</table>
+<h2 id="openalex-work">出力フォーマット（OpenAlex Work スキーマ準拠）</h2>
+<pre><code class="language-json">{
+  &quot;work_id&quot;: &quot;https://openalex.org/W2781293634&quot;,
+  &quot;primary_topic&quot;: {
+    &quot;id&quot;: &quot;https://openalex.org/T10318&quot;,
+    &quot;display_name&quot;: &quot;Machine Learning in Healthcare&quot;,
+    &quot;score&quot;: 0.7790
+  },
+  &quot;topics&quot;: [
+    { &quot;id&quot;: &quot;...&quot;, &quot;display_name&quot;: &quot;Machine Learning in Healthcare&quot;,     &quot;score&quot;: 0.7790 },
+    { &quot;id&quot;: &quot;...&quot;, &quot;display_name&quot;: &quot;Biomedical Text Mining and Ontologies&quot;, &quot;score&quot;: 0.7621 },
+    { &quot;id&quot;: &quot;...&quot;, &quot;display_name&quot;: &quot;Clinical Decision Support Systems&quot;,   &quot;score&quot;: 0.7488 }
+  ],
+  &quot;method&quot;: &quot;embedding&quot;
+}
+</code></pre>
+<h2 id="_3">公開リポジトリ・関連リンク</h2>
+<ul>
+<li><strong>プロジェクト本体（GitHub）：</strong> https://github.com/KKasama/OpenAlex-Topics-assignment-for-IRDB</li>
+<li><strong>複数 Topic 対応の Pull Request（#4）：</strong> https://github.com/KKasama/OpenAlex-Topics-assignment-for-IRDB/pull/4</li>
+<li><strong>添付：</strong> 技術メモ（モデル選定根拠・パイプライン・実行結果サマリ）</li>
+</ul>
+<p>完了次第、改めて最終結果のサマリと出力ファイルの取り扱いについてご連絡させていただきます。本データの OpenAlex 側への提供についても、先生のご意見を伺ったうえで進めたいと考えております。</p>
+<p>引き続きどうぞよろしくお願い申し上げます。</p>
+<p>笠間和喜
+iGroup Japan
+kazuki@igroupjapan.com</p>
+</body>
+</html>

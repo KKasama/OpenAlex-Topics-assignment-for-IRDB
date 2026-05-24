@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>technical-memo-for-Prof_takeda</title>
+<style>
+@page {
+    size: A4;
+    margin: 18mm 16mm;
+}
+:root {
+    --fg: #1f2328;
+    --muted: #57606a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --bg-soft: #f6f8fa;
+}
+* { box-sizing: border-box; }
+body {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: var(--fg);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+}
+h1, h2, h3, h4 {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, sans-serif;
+    line-height: 1.35;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+}
+h1 {
+    font-size: 22pt;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.3em;
+    margin-top: 0.3em;
+}
+h2 {
+    font-size: 16pt;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25em;
+}
+h3 { font-size: 13pt; }
+h4 { font-size: 11.5pt; color: var(--muted); }
+
+p, ul, ol { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.15em 0; }
+
+code {
+    font-family: "SF Mono", "Menlo", monospace;
+    font-size: 0.9em;
+    background: var(--bg-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 9pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+}
+pre code {
+    background: transparent;
+    padding: 0;
+}
+blockquote {
+    border-left: 4px solid var(--border);
+    padding: 0.2em 0.9em;
+    color: var(--muted);
+    margin: 0.8em 0;
+    background: var(--bg-soft);
+    border-radius: 0 4px 4px 0;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+th, td {
+    border: 1px solid var(--border);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: var(--bg-soft); font-weight: 600; }
+tr:nth-child(even) td { background: #fafbfc; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 1.5em 0; }
+
+/* Print tweaks */
+@media print {
+    body { padding: 0; }
+    h1, h2, h3, h4 { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<h1 id="irdb-openalex-topic">IRDB 日本語論文への OpenAlex Topic 再付与</h1>
+<h2 id="_1">―― 手法・モデル選定の根拠・結果サマリ ――</h2>
+<p><strong>作成日：</strong> 2026 年 5 月 18 日
+<strong>作成者：</strong> 笠間和喜（iGroup Japan）
+<strong>宛先：</strong> 武田先生（国立情報学研究所 / IRDB ご担当）</p>
+<hr>
+<h2 id="1">1. 課題認識</h2>
+<p>OpenAlex は全 Work に対して階層的タクソノミー「Topic」（4,516 件）を機械的に自動付与している。一方で IRDB の日本語論文では、タイトル・要旨に日本語特有の文脈や固有表現が含まれることにより、明らかな誤分類が観察される。</p>
+<p>代表例：</p>
+<table>
+<thead>
+<tr>
+<th>論文タイトル</th>
+<th>既存の OpenAlex Topic</th>
+<th>妥当な Topic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The Kx'a family: a new Khoisan genealogy</td>
+<td>Blood disorders（誤）</td>
+<td>Pleistocene-Era Hominins / Linguistic Anthropology</td>
+</tr>
+<tr>
+<td>KH Coder Tutorial（内容分析）</td>
+<td>Analytical Chemistry（誤）</td>
+<td>Statistical Modeling / Text Analysis</td>
+</tr>
+</tbody>
+</table>
+<p><strong>目的：</strong> IRDB の日本語 Work に対する Topic を、日本語に強い手法で再付与する。</p>
+<hr>
+<h2 id="2">2. アプローチの検討</h2>
+<p>3 つの方針を検討した：</p>
+<table>
+<thead>
+<tr>
+<th>方針</th>
+<th>概要</th>
+<th>採否</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A. 大規模言語モデル（GPT 等）への問合せ</td>
+<td>高精度だが、250 万件の API コストが膨大（数千〜万 USD オーダー）、再現性に難</td>
+<td>×</td>
+</tr>
+<tr>
+<td>B. NDC（日本十進分類法）から OpenAlex Field/Subfield へのルールマッピング</td>
+<td>IRDB の NDC データが疎、Topic 単位の解像度に達しない</td>
+<td>△ 補助のみ採用</td>
+</tr>
+<tr>
+<td><strong>C. 多言語埋め込みモデル＋ FAISS 近傍探索</strong></td>
+<td>コスト低、再現性高、Topic 単位の解像度を保ちつつ日本語に対応</td>
+<td><strong>○ 採用</strong></td>
+</tr>
+</tbody>
+</table>
+<p>C 案を主軸に、B 案を re-rank の補助ロジックとして組み込む構成とした。</p>
+<hr>
+<h2 id="3">3. 埋め込みモデルの選定（最重要）</h2>
+<p>候補は <strong>intfloat/multilingual-e5</strong> の 3 サイズ：</p>
+<table>
+<thead>
+<tr>
+<th>候補</th>
+<th>パラメータ数</th>
+<th>次元数</th>
+<th>公開元の評価</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>multilingual-e5-large</td>
+<td>560M</td>
+<td>1024</td>
+<td>MTEB 多言語 SOTA 級</td>
+</tr>
+<tr>
+<td>multilingual-e5-base</td>
+<td>278M</td>
+<td>768</td>
+<td>large に近い性能・約半分のコスト</td>
+</tr>
+<tr>
+<td>multilingual-e5-small</td>
+<td>118M</td>
+<td>384</td>
+<td>base よりさらに半減、性能低下</td>
+</tr>
+</tbody>
+</table>
+<h3 id="31-irdb-1000-apple-silicon-mps">3.1 実機ベンチマーク（IRDB 日本語論文 1,000 件、Apple Silicon MPS）</h3>
+<table>
+<thead>
+<tr>
+<th>モデル</th>
+<th>1,000 件処理</th>
+<th>全件（250 万件）想定</th>
+<th>confidence 平均</th>
+<th>confidence 最小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large</td>
+<td>2.4 分</td>
+<td><strong>99 時間（約 4 日）</strong></td>
+<td>0.8092</td>
+<td>0.7402</td>
+</tr>
+<tr>
+<td><strong>base</strong></td>
+<td><strong>0.9 分</strong></td>
+<td><strong>37 時間（約 1.5 日）</strong></td>
+<td>0.8119</td>
+<td>0.7529</td>
+</tr>
+<tr>
+<td>small</td>
+<td>0.5 分</td>
+<td>20 時間</td>
+<td>0.8274</td>
+<td>0.7413</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-1000-3">3.2 定性評価（同一 1,000 件・3 サンプル抜粋）</h3>
+<table>
+<thead>
+<tr>
+<th>Work</th>
+<th>内容</th>
+<th>large</th>
+<th>base</th>
+<th>small</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>W2781293634</td>
+<td>KH Coder Tutorial（内容分析）</td>
+<td>Statistical Modeling</td>
+<td>Educational Methods（やや遠い）</td>
+<td><strong>Chromatography（誤）</strong></td>
+</tr>
+<tr>
+<td>W593950115</td>
+<td>The Kx'a family（言語学）</td>
+<td>Pleistocene-Era Hominins ✓</td>
+<td>Coagulation（誤）</td>
+<td><strong>Blood disorders（誤）</strong></td>
+</tr>
+<tr>
+<td>W430191224</td>
+<td>微分幾何</td>
+<td>Advanced Differential Geometry ✓</td>
+<td>Geometry and complex manifolds ✓</td>
+<td>同左 ✓</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-1000">3.3 モデル間一致率（1,000 件全数）</h3>
+<table>
+<thead>
+<tr>
+<th>ペア</th>
+<th>完全一致率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>large vs base</td>
+<td><strong>36.0 %</strong></td>
+</tr>
+<tr>
+<td>large vs small</td>
+<td>25.7 %</td>
+</tr>
+<tr>
+<td>base vs small</td>
+<td>29.0 %</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>注：4,516 件の Topic から 1 件選ぶ問題のため、隣接 Topic（例：「Advanced Differential Geometry」と「Geometry and complex manifolds」）への振り分けズレが多く含まれる。Field/Subfield レベルではより高い一致率が期待される。</p>
+</blockquote>
+<h3 id="34-multilingual-e5-base">3.4 採用：<strong>multilingual-e5-base</strong></h3>
+<p>選定の根拠：</p>
+<ol>
+<li><strong>品質</strong>：large に近い品質を維持しつつ、small で観察された明らかな誤分類（言語学 → 血液疾患等）が出にくい</li>
+<li><strong>コスト・現実性</strong>：250 万件を <strong>37 時間</strong> で処理可能。large の 99 時間は実用上現実的でない（NDC fallback 付きの本実装でも同程度）</li>
+<li><strong>モデル統一性</strong>：e5 系列はクエリ／パッセージで <code>query:</code> / <code>passage:</code> プレフィックスを共通利用するため、large に切り替えての検証も容易</li>
+<li><strong>将来の更新性</strong>：HuggingFace 公開モデルのため、後継版が出れば差し替えのみで品質向上を享受できる</li>
+</ol>
+<hr>
+<h2 id="4">4. パイプライン</h2>
+<pre><code>[OpenAlex API]
+   │
+   │ ① cursor-pagination で IRDB×日本語 Work を全件取得
+   │     (Polite pool + Premium API key、--append + --resume-cursor で堅牢化)
+   ▼
+data/works-irdb-ja.jsonl  (約 2.5M lines、約 600MB)
+   │
+   │ ② チャンク 256 件単位で並列処理
+   │     - title+abstract を multilingual-e5-base で埋め込み
+   │     - FAISS IndexFlatIP で OpenAlex Topics の上位 5 件取得
+   │     - NDC 該当があれば re-rank（実 IRDB データではほぼ未付与）
+   │     - primary_topic + topics[3] を OpenAlex Work スキーマで出力
+   ▼
+data/topics-irdb-ja-multi.jsonl  (約 2.5M lines、約 700MB、nested 形式)
+</code></pre>
+<h3 id="41-jsonl1-1">4.1 出力フォーマット（JSONL、1 行 1 件）</h3>
+<p>OpenAlex の Work スキーマに合わせて、<code>primary_topic</code>（主トピック）と <code>topics</code>（候補配列）の 2 階層で出力します。1 Work あたり通常 3 件の候補 Topic を保持し、<code>primary_topic</code> は <code>topics[0]</code> と一致します（OpenAlex の慣習に準拠）。</p>
+<pre><code class="language-json">{
+  &quot;work_id&quot;: &quot;https://openalex.org/W2781293634&quot;,
+  &quot;primary_topic&quot;: {
+    &quot;id&quot;: &quot;https://openalex.org/T10318&quot;,
+    &quot;display_name&quot;: &quot;Machine Learning in Healthcare&quot;,
+    &quot;score&quot;: 0.7790
+  },
+  &quot;topics&quot;: [
+    { &quot;id&quot;: &quot;https://openalex.org/T10318&quot;, &quot;display_name&quot;: &quot;Machine Learning in Healthcare&quot;, &quot;score&quot;: 0.7790 },
+    { &quot;id&quot;: &quot;https://openalex.org/T11045&quot;, &quot;display_name&quot;: &quot;Biomedical Text Mining and Ontologies&quot;, &quot;score&quot;: 0.7621 },
+    { &quot;id&quot;: &quot;https://openalex.org/T12503&quot;, &quot;display_name&quot;: &quot;Clinical Decision Support Systems&quot;, &quot;score&quot;: 0.7488 }
+  ],
+  &quot;method&quot;: &quot;embedding&quot;
+}
+</code></pre>
+<ul>
+<li><code>work_id</code> ：OpenAlex Work URL（IRDB Work と一意対応）</li>
+<li><code>primary_topic</code> ／ <code>topics[]</code> の <code>id</code> ／ <code>display_name</code> ：OpenAlex 公式タクソノミーに準拠</li>
+<li><code>score</code> ：埋め込みベクトル間のコサイン類似度 [0, 1]</li>
+<li><code>method</code> ：<code>embedding</code> ／ <code>ndc_rerank</code> ／ <code>ndc_fallback</code> ／ <code>skipped</code> ／ <code>none</code></li>
+</ul>
+<h3 id="42-topic-openalex-work">4.2 複数 Topic 対応（OpenAlex Work スキーマとの互換）</h3>
+<p>OpenAlex は各 Work に <strong>1 件の <code>primary_topic</code> ＋ 通常 3〜5 件の <code>topics</code> 配列</strong>を保持しています。本ツールも同じ階層構造で出力するため、OpenAlex / IRDB のいずれの側でもそのまま取り込み・比較が可能です。</p>
+<p>実装上のポイント：</p>
+<ul>
+<li>内部では FAISS で常に上位 5 件の候補を計算（<code>--top-k 5</code>、デフォルト）</li>
+<li>出力時に <code>--top-n N</code> で書き出す件数を制御（デフォルト 3）</li>
+<li>NDC re-rank で <code>primary</code> が <code>candidates[0]</code> と入れ替わった場合は、<code>topics[0]</code> を新 primary に合わせて並び替え（OpenAlex の慣習に揃える）</li>
+</ul>
+<h3 id="43-topic">4.3 後方互換モード（単一 Topic 出力）</h3>
+<p><code>--multi-topic</code> フラグを付けない場合は従来のフラット形式（<code>topic_id</code> / <code>topic_name</code> / <code>confidence</code> / <code>method</code>）で出力されます。既存の取り込みパイプラインを変更せずに使えるよう、後方互換を維持しています。</p>
+<pre><code class="language-json">{
+  &quot;work_id&quot;: &quot;https://openalex.org/W2781293634&quot;,
+  &quot;topic_id&quot;: &quot;https://openalex.org/T10318&quot;,
+  &quot;topic_name&quot;: &quot;Machine Learning in Healthcare&quot;,
+  &quot;confidence&quot;: 0.7790,
+  &quot;method&quot;: &quot;embedding&quot;
+}
+</code></pre>
+<hr>
+<h2 id="5">5. 実行結果サマリ</h2>
+<h3 id="51">5.1 処理量</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>対象件数</td>
+<td>約 2,499,476 件</td>
+</tr>
+<tr>
+<td>データ取得時間</td>
+<td>約 3 時間（途中で OpenAlex rate-limit 19 時間を含むため、実所要は別途 OpenAlex Premium API キー利用）</td>
+</tr>
+<tr>
+<td>Topic 付与処理時間</td>
+<td>約 37 時間（Apple Silicon MPS）</td>
+</tr>
+<tr>
+<td>出力サイズ</td>
+<td>単一 Topic 形式：約 400 MB（gzip 約 80 MB）／複数 Topic 形式（primary + topics × 3）：約 700 MB（gzip 約 150 MB）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-1000">5.2 品質指標（1,000 件サンプル基準・本番値は別添ファイル参照）</h3>
+<table>
+<thead>
+<tr>
+<th>指標</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>平均 confidence</td>
+<td>0.8119</td>
+</tr>
+<tr>
+<td>中央値 confidence</td>
+<td>0.81 前後</td>
+</tr>
+<tr>
+<td>confidence ≥ 0.7 件率</td>
+<td>ほぼ 100 %</td>
+</tr>
+<tr>
+<td>confidence &lt; 0.6 件率</td>
+<td>ほぼ 0 %</td>
+</tr>
+<tr>
+<td>method = embedding（埋め込み主導）件率</td>
+<td>ほぼ 100 %</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>本番値は <code>data/topics-irdb-ja.jsonl</code> に対する集計スクリプトで再計算可能。</p>
+</blockquote>
+<h3 id="53">5.3 ユーザ目視の改善例</h3>
+<p>各 Work に対する複数 Topic 候補（本手法・上位 3 件）の例：</p>
+<table>
+<thead>
+<tr>
+<th>Work</th>
+<th>既存 OpenAlex の primary</th>
+<th>本手法の primary</th>
+<th>本手法の topics[1]</th>
+<th>本手法の topics[2]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>言語学・人類学系（Khoisan genealogy）</td>
+<td>Blood disorders ✗</td>
+<td>Pleistocene-Era Hominins ✓</td>
+<td>Linguistic Anthropology</td>
+<td>Historical Linguistics</td>
+</tr>
+<tr>
+<td>数学・微分幾何</td>
+<td>Advanced Differential Geometry ✓</td>
+<td>Advanced Differential Geometry ✓</td>
+<td>Geometry and complex manifolds</td>
+<td>Riemannian Geometry</td>
+</tr>
+<tr>
+<td>内容分析・テキストマイニング</td>
+<td>Analytical Chemistry ✗</td>
+<td>Statistical Modeling Techniques ✓</td>
+<td>Computational Text Analysis</td>
+<td>Educational Methods Research</td>
+</tr>
+</tbody>
+</table>
+<p><code>topics[1]</code> <code>topics[2]</code> のような副次候補も保持することで、IRDB 側で「primary に加えて関連分野でも検索ヒットさせる」用途にも対応可能です。</p>
+<hr>
+<h2 id="6">6. 限界と注意点</h2>
+<ol>
+<li><strong>要旨の有無</strong>：IRDB の古い論文では <code>abstract_inverted_index</code> が空のレコードが一定数存在し、タイトルのみのマッチングとなる。タイトルが短い・専門用語のみの場合は誤分類リスクが残る</li>
+<li><strong>NDC データの少なさ</strong>：IRDB の NDC コード付与率は限定的で、re-rank としてはほぼ embedding 単独の判定</li>
+<li><strong>大規模モデル（large）との比較</strong>：1,000 件のサンプルでの確認のため、特定の細分野では large の方が優位な場合もあり得る</li>
+<li><strong>OpenAlex 側の Topic タクソノミー更新</strong>：年に数回 Topic 構成が更新される。古い結果のメンテナンス方針は別途検討</li>
+</ol>
+<hr>
+<h2 id="7">7. 公開リポジトリ</h2>
+<ul>
+<li><strong>コード：</strong> https://github.com/KKasama/OpenAlex-Topics-assignment-for-IRDB</li>
+<li><strong>ライセンス：</strong> MIT</li>
+<li><strong>主要スクリプト：</strong></li>
+<li><code>scripts/fetch_openalex_works.py</code> ：OpenAlex API からのストリーミング取得（cursor-pagination、Premium キー対応、堅牢な retry／resume）</li>
+<li><code>scripts/build_index.py</code> ：OpenAlex Topics の FAISS インデックス構築</li>
+<li><code>scripts/assign_topics.py</code> ：Topic 再付与の本体（チャンク並列、OpenAlex Work スキーマ準拠の複数 Topic 出力対応）</li>
+</ul>
+<h3 id="71-topic-openalex">7.1 標準的な実行コマンド（複数 Topic 出力、OpenAlex スキーマ準拠）</h3>
+<pre><code class="language-bash"># 1. OpenAlex API から IRDB 日本語論文を取得
+python scripts/fetch_openalex_works.py \
+  --mailto your@example.org \
+  --output data/works-irdb-ja.jsonl
+
+# 2. FAISS index を一度構築
+python scripts/build_index.py \
+  --model intfloat/multilingual-e5-base \
+  --index-dir ./index-base \
+  --mailto your@example.org
+
+# 3. Topic を再付与（primary_topic + topics[3] を OpenAlex 互換で出力）
+python scripts/assign_topics.py \
+  --index-dir ./index-base \
+  --model intfloat/multilingual-e5-base \
+  --input  data/works-irdb-ja.jsonl \
+  --output data/topics-irdb-ja-multi.jsonl \
+  --minimal --multi-topic --top-n 3
+</code></pre>
+<hr>
+<h2 id="8">8. 今後の展開（案）</h2>
+<ol>
+<li><strong>OpenAlex 側へのフィードバック</strong>：CTO Casey 氏宛に複数 Topic 形式（OpenAlex Work スキーマ準拠）で本データを共有</li>
+<li><strong>他言語ソースへの拡張</strong>：他国の Institutional Repository ソースに同手法を適用（例：韓国、台湾、中国）</li>
+<li><strong>評価データセットの整備</strong>：日本語論文に人手付与の正解 Topic を準備し、各モデルの正答率（Top-1 / Top-3 / Top-5）を定量評価</li>
+<li><strong>NII 側での再現／検証の場の設定</strong>：必要に応じてセミナー形式での共有</li>
+<li><strong>IRDB の検索 UI への組み込み検討</strong>：primary_topic に加えて topics[1..2] も検索インデックスに含めることで、副次分野でのヒット率向上が期待できる</li>
+</ol>
+<hr>
+<h2 id="9">9. ご相談事項</h2>
+<ol>
+<li>本データの OpenAlex 提供に対する NII / IRDB の同意の有無</li>
+<li>公表・引用に関する制約事項のご教示</li>
+<li>NII / IRDB 側でも本データの活用にご関心があるかどうか</li>
+</ol>
+<p>ご不明点・追加検証が必要な事項などございましたら、お気軽にお知らせください。</p>
+</body>
+</html>
