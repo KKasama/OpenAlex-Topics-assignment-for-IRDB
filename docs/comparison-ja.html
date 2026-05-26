@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>comparison-ja</title>
+<style>
+@page {
+    size: A4;
+    margin: 18mm 16mm;
+}
+:root {
+    --fg: #1f2328;
+    --muted: #57606a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --bg-soft: #f6f8fa;
+}
+* { box-sizing: border-box; }
+body {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: var(--fg);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+}
+h1, h2, h3, h4 {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, sans-serif;
+    line-height: 1.35;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+}
+h1 {
+    font-size: 22pt;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.3em;
+    margin-top: 0.3em;
+}
+h2 {
+    font-size: 16pt;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25em;
+}
+h3 { font-size: 13pt; }
+h4 { font-size: 11.5pt; color: var(--muted); }
+
+p, ul, ol { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.15em 0; }
+
+code {
+    font-family: "SF Mono", "Menlo", monospace;
+    font-size: 0.9em;
+    background: var(--bg-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 9pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+}
+pre code {
+    background: transparent;
+    padding: 0;
+}
+blockquote {
+    border-left: 4px solid var(--border);
+    padding: 0.2em 0.9em;
+    color: var(--muted);
+    margin: 0.8em 0;
+    background: var(--bg-soft);
+    border-radius: 0 4px 4px 0;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+th, td {
+    border: 1px solid var(--border);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: var(--bg-soft); font-weight: 600; }
+tr:nth-child(even) td { background: #fafbfc; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 1.5em 0; }
+
+/* Print tweaks */
+@media print {
+    body { padding: 0; }
+    h1, h2, h3, h4 { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<h1 id="openalex-vs">改善比較表（既存 OpenAlex vs 本手法、日本語論文サンプル）</h1>
+<p><strong>サンプル件数：</strong> 10 件（日本語タイトル論文から無作為抽出、seed=42）</p>
+<p><strong>primary_topic が変わった件数：</strong> 10 / 10 件</p>
+<hr>
+<h2 id="1">1. クロバナハンショウヅル</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7144005558">https://openalex.org/W7144005558</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td></td>
+<td>Plant Disease Resistance and Genetics <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td></td>
+<td>Cynara cardunculus studies</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td></td>
+<td>Fungal Plant Pathogen Control</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-b-391-20">2. B-39)微小血管減圧術で治癒した舌咽神経痛の1例(北日本脳神経外科連合会, 第20回学術集会)</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W2724870230">https://openalex.org/W2724870230</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Military Technology and Strategies</td>
+<td>Trigeminal Neuralgia and Treatments <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Legal and Regulatory Analysis</td>
+<td>Cardiac and Coronary Surgery Techniques</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Linguistic, Cultural, and Literary Studies</td>
+<td>Coagulation, Bradykinin, Polyphosphates, and Angioedema</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-investigation-of-the-factors-affecting-risk-based-quality-management-of-investig">3. Investigation of the factors affecting risk-based quality management of investig…</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7145155431">https://openalex.org/W7145155431</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Statistical Methods in Clinical Trials</td>
+<td>Clinical Laboratory Practices and Quality Control <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Cancer Treatment and Pharmacology</td>
+<td>Animal testing and alternatives</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Safe Handling of Antineoplastic Drugs</td>
+<td>Pharmaceutical Quality and Counterfeiting</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-2">4. 急性上気道狭窄のため緊急気管切開を要した2症例</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7144967685">https://openalex.org/W7144967685</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Military Technology and Strategies</td>
+<td>Respiratory Support and Mechanisms <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Legal and Regulatory Analysis</td>
+<td>Tracheal and airway disorders</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Linguistic, Cultural, and Literary Studies</td>
+<td>Airway Management and Intubation Techniques</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5">5. 布線論理によるタスクスケジューリング時間の平準化技法</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7144832313">https://openalex.org/W7144832313</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Military Technology and Strategies</td>
+<td>Scheduling and Timetabling Solutions <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Legal and Regulatory Analysis</td>
+<td>Injection Molding Process and Properties</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Linguistic, Cultural, and Literary Studies</td>
+<td>Advanced Numerical Analysis Techniques</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6">6. 暮らしの「整理収納」に関する研究―高齢期におけるモノの整理収納の特性について―</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7144259456">https://openalex.org/W7144259456</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Military Technology and Strategies</td>
+<td>Migration, Aging, and Tourism Studies <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Legal and Regulatory Analysis</td>
+<td>Technology Use by Older Adults</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Linguistic, Cultural, and Literary Studies</td>
+<td>Older Adults Driving Studies</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7">7. ミルク入りコーヒー飲料の製法と香味変化に関する感性工学的研究</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7143925261">https://openalex.org/W7143925261</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Military Technology and Strategies</td>
+<td>Injection Molding Process and Properties <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Legal and Regulatory Analysis</td>
+<td>Biochemical Analysis and Sensing Techniques</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Linguistic, Cultural, and Literary Studies</td>
+<td>Sensory Analysis and Statistical Methods</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-21">8. 蔬菜の結球に関する生理，形態学的研究（第21報） : ハクサイの生長に伴うその葉面積の変化について</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7143784398">https://openalex.org/W7143784398</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Military Technology and Strategies</td>
+<td>Plant Reproductive Biology <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Legal and Regulatory Analysis</td>
+<td>Growth and nutrition in plants</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Linguistic, Cultural, and Literary Studies</td>
+<td>Plant Physiology and Cultivation Studies</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-3-ii">9. 3 協議会記録（II アクティブ・ラーニングの実践報告と協議会記録・講評 : 算数科）</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W7146082908">https://openalex.org/W7146082908</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Legal and Regulatory Analysis</td>
+<td>Advanced Optimization Algorithms Research <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Military Technology and Strategies</td>
+<td>Intelligent Tutoring Systems and Adaptive Learning</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Linguistic, Cultural, and Literary Studies</td>
+<td>Agricultural and Financial Auditing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="10-2-">10. 局部座屈を伴う組立材ブレースの座屈後履歴性状および累積変形性能 -その2 数値解析と累積変形性能評価-</h2>
+<ul>
+<li><strong>Work ID:</strong> <a href="https://openalex.org/W3033990651">https://openalex.org/W3033990651</a></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>既存 OpenAlex</th>
+<th>本手法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary_topic</td>
+<td>Hermeneutics and Narrative Identity</td>
+<td>Structural Behavior of Reinforced Concrete <strong>(変更)</strong></td>
+</tr>
+<tr>
+<td>topics[1]</td>
+<td>Aging, Elder Care, and Social Issues</td>
+<td>Composite Structure Analysis and Optimization</td>
+</tr>
+<tr>
+<td>topics[2]</td>
+<td>Health, Medicine and Society</td>
+<td>Fatigue and fracture mechanics</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
