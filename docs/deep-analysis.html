@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>deep-analysis</title>
+<style>
+@page {
+    size: A4;
+    margin: 18mm 16mm;
+}
+:root {
+    --fg: #1f2328;
+    --muted: #57606a;
+    --accent: #0969da;
+    --border: #d0d7de;
+    --bg-soft: #f6f8fa;
+}
+* { box-sizing: border-box; }
+body {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: var(--fg);
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+}
+h1, h2, h3, h4 {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+                 -apple-system, sans-serif;
+    line-height: 1.35;
+    margin-top: 1.6em;
+    margin-bottom: 0.6em;
+}
+h1 {
+    font-size: 22pt;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.3em;
+    margin-top: 0.3em;
+}
+h2 {
+    font-size: 16pt;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25em;
+}
+h3 { font-size: 13pt; }
+h4 { font-size: 11.5pt; color: var(--muted); }
+
+p, ul, ol { margin: 0.6em 0; }
+ul, ol { padding-left: 1.4em; }
+li { margin: 0.15em 0; }
+
+code {
+    font-family: "SF Mono", "Menlo", monospace;
+    font-size: 0.9em;
+    background: var(--bg-soft);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+pre {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-size: 9pt;
+    line-height: 1.5;
+    page-break-inside: avoid;
+}
+pre code {
+    background: transparent;
+    padding: 0;
+}
+blockquote {
+    border-left: 4px solid var(--border);
+    padding: 0.2em 0.9em;
+    color: var(--muted);
+    margin: 0.8em 0;
+    background: var(--bg-soft);
+    border-radius: 0 4px 4px 0;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.8em 0;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+th, td {
+    border: 1px solid var(--border);
+    padding: 5px 8px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: var(--bg-soft); font-weight: 600; }
+tr:nth-child(even) td { background: #fafbfc; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 1.5em 0; }
+
+/* Print tweaks */
+@media print {
+    body { padding: 0; }
+    h1, h2, h3, h4 { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<h1 id="_1">信頼度スコア深掘り分析レポート</h1>
+<h2 id="irdb-openalex-topic-multilingual-e5-base">IRDB 日本語論文 OpenAlex Topic 再付与 — multilingual-e5-base</h2>
+<p><strong>作成日：</strong> 2026 年 5 月 26 日<br>
+<strong>対象件数：</strong> 2,499,476 件<br>
+<strong>タイトル長短閾値：</strong> 30 文字</p>
+<hr>
+<h2 id="1a-primary-topic-20">1a. Primary Topic 上位 20 件：階層情報とスコア分布</h2>
+<blockquote>
+<p>各 Topic の OpenAlex 階層（Domain / Field / Subfield）とスコア統計量（件数・平均・中央値・標準偏差・最小・最大）。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">件数</th>
+<th>Topic</th>
+<th>Domain</th>
+<th>Field</th>
+<th>Subfield</th>
+<th style="text-align: right;">平均</th>
+<th style="text-align: right;">中央値</th>
+<th style="text-align: right;">標準偏差</th>
+<th style="text-align: right;">最小</th>
+<th style="text-align: right;">最大</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">50,499</td>
+<td>Urban and spatial planning</td>
+<td>Physical Sciences</td>
+<td>Environmental Science</td>
+<td>Nature and Landscape Conservation</td>
+<td style="text-align: right;">0.7863</td>
+<td style="text-align: right;">0.7839</td>
+<td style="text-align: right;">0.0212</td>
+<td style="text-align: right;">0.6934</td>
+<td style="text-align: right;">0.8748</td>
+</tr>
+<tr>
+<td style="text-align: right;">42,036</td>
+<td>Coagulation, Bradykinin, Polyphosphates, and Angioedema</td>
+<td>Health Sciences</td>
+<td>Medicine</td>
+<td>Genetics</td>
+<td style="text-align: right;">0.7922</td>
+<td style="text-align: right;">0.7932</td>
+<td style="text-align: right;">0.0251</td>
+<td style="text-align: right;">0.7090</td>
+<td style="text-align: right;">0.8787</td>
+</tr>
+<tr>
+<td style="text-align: right;">30,910</td>
+<td>Injection Molding Process and Properties</td>
+<td>Physical Sciences</td>
+<td>Engineering</td>
+<td>Mechanical Engineering</td>
+<td style="text-align: right;">0.7979</td>
+<td style="text-align: right;">0.8008</td>
+<td style="text-align: right;">0.0180</td>
+<td style="text-align: right;">0.7181</td>
+<td style="text-align: right;">0.8640</td>
+</tr>
+<tr>
+<td style="text-align: right;">29,197</td>
+<td>Urban Planning and Landscape Design</td>
+<td>Physical Sciences</td>
+<td>Environmental Science</td>
+<td>Management, Monitoring, Policy and Law</td>
+<td style="text-align: right;">0.7723</td>
+<td style="text-align: right;">0.7719</td>
+<td style="text-align: right;">0.0166</td>
+<td style="text-align: right;">0.6962</td>
+<td style="text-align: right;">0.8507</td>
+</tr>
+<tr>
+<td style="text-align: right;">25,001</td>
+<td>Lymphadenopathy Diagnosis and Analysis</td>
+<td>Health Sciences</td>
+<td>Medicine</td>
+<td>Surgery</td>
+<td style="text-align: right;">0.7892</td>
+<td style="text-align: right;">0.7914</td>
+<td style="text-align: right;">0.0256</td>
+<td style="text-align: right;">0.7005</td>
+<td style="text-align: right;">0.8631</td>
+</tr>
+<tr>
+<td style="text-align: right;">20,306</td>
+<td>Decadence, Literature, and Society</td>
+<td>Social Sciences</td>
+<td>Social Sciences</td>
+<td>Sociology and Political Science</td>
+<td style="text-align: right;">0.7719</td>
+<td style="text-align: right;">0.7714</td>
+<td style="text-align: right;">0.0156</td>
+<td style="text-align: right;">0.6997</td>
+<td style="text-align: right;">0.8662</td>
+</tr>
+<tr>
+<td style="text-align: right;">16,591</td>
+<td>Renal and related cancers</td>
+<td>Life Sciences</td>
+<td>Biochemistry, Genetics and Molecular Biology</td>
+<td>Molecular Biology</td>
+<td style="text-align: right;">0.7866</td>
+<td style="text-align: right;">0.7806</td>
+<td style="text-align: right;">0.0175</td>
+<td style="text-align: right;">0.6904</td>
+<td style="text-align: right;">0.8619</td>
+</tr>
+<tr>
+<td style="text-align: right;">15,004</td>
+<td>Diverse Academic Research Analysis</td>
+<td>Social Sciences</td>
+<td>Social Sciences</td>
+<td>Sociology and Political Science</td>
+<td style="text-align: right;">0.7886</td>
+<td style="text-align: right;">0.7895</td>
+<td style="text-align: right;">0.0156</td>
+<td style="text-align: right;">0.7091</td>
+<td style="text-align: right;">0.8373</td>
+</tr>
+<tr>
+<td style="text-align: right;">14,210</td>
+<td>Dielectric properties of ceramics</td>
+<td>Physical Sciences</td>
+<td>Materials Science</td>
+<td>Materials Chemistry</td>
+<td style="text-align: right;">0.7967</td>
+<td style="text-align: right;">0.8025</td>
+<td style="text-align: right;">0.0216</td>
+<td style="text-align: right;">0.7172</td>
+<td style="text-align: right;">0.8661</td>
+</tr>
+<tr>
+<td style="text-align: right;">12,755</td>
+<td>Vasculitis and related conditions</td>
+<td>Health Sciences</td>
+<td>Medicine</td>
+<td>Pulmonary and Respiratory Medicine</td>
+<td style="text-align: right;">0.7936</td>
+<td style="text-align: right;">0.8025</td>
+<td style="text-align: right;">0.0279</td>
+<td style="text-align: right;">0.7128</td>
+<td style="text-align: right;">0.8979</td>
+</tr>
+<tr>
+<td style="text-align: right;">11,793</td>
+<td>Forest, Soil, and Plant Ecology in China</td>
+<td>Social Sciences</td>
+<td>Social Sciences</td>
+<td>Education</td>
+<td style="text-align: right;">0.7974</td>
+<td style="text-align: right;">0.7998</td>
+<td style="text-align: right;">0.0198</td>
+<td style="text-align: right;">0.7264</td>
+<td style="text-align: right;">0.8518</td>
+</tr>
+<tr>
+<td style="text-align: right;">11,649</td>
+<td>Coding theory and cryptography</td>
+<td>Physical Sciences</td>
+<td>Computer Science</td>
+<td>Artificial Intelligence</td>
+<td style="text-align: right;">0.7856</td>
+<td style="text-align: right;">0.7851</td>
+<td style="text-align: right;">0.0198</td>
+<td style="text-align: right;">0.7218</td>
+<td style="text-align: right;">0.8648</td>
+</tr>
+<tr>
+<td style="text-align: right;">11,513</td>
+<td>Genetic and rare skin diseases.</td>
+<td>Life Sciences</td>
+<td>Biochemistry, Genetics and Molecular Biology</td>
+<td>Genetics</td>
+<td style="text-align: right;">0.7954</td>
+<td style="text-align: right;">0.8008</td>
+<td style="text-align: right;">0.0247</td>
+<td style="text-align: right;">0.7138</td>
+<td style="text-align: right;">0.8560</td>
+</tr>
+<tr>
+<td style="text-align: right;">11,107</td>
+<td>Currency Recognition and Detection</td>
+<td>Physical Sciences</td>
+<td>Computer Science</td>
+<td>Computer Vision and Pattern Recognition</td>
+<td style="text-align: right;">0.7797</td>
+<td style="text-align: right;">0.7799</td>
+<td style="text-align: right;">0.0082</td>
+<td style="text-align: right;">0.7136</td>
+<td style="text-align: right;">0.8278</td>
+</tr>
+<tr>
+<td style="text-align: right;">10,324</td>
+<td>Japanese History and Culture</td>
+<td>Social Sciences</td>
+<td>Social Sciences</td>
+<td>Cultural Studies</td>
+<td style="text-align: right;">0.7837</td>
+<td style="text-align: right;">0.7841</td>
+<td style="text-align: right;">0.0177</td>
+<td style="text-align: right;">0.7033</td>
+<td style="text-align: right;">0.8494</td>
+</tr>
+<tr>
+<td style="text-align: right;">10,097</td>
+<td>Clinical Laboratory Practices and Quality Control</td>
+<td>Health Sciences</td>
+<td>Medicine</td>
+<td>Physiology</td>
+<td style="text-align: right;">0.7971</td>
+<td style="text-align: right;">0.7985</td>
+<td style="text-align: right;">0.0165</td>
+<td style="text-align: right;">0.7185</td>
+<td style="text-align: right;">0.8531</td>
+</tr>
+<tr>
+<td style="text-align: right;">10,042</td>
+<td>Cognitive and psychological constructs research</td>
+<td>Social Sciences</td>
+<td>Psychology</td>
+<td>Social Psychology</td>
+<td style="text-align: right;">0.7887</td>
+<td style="text-align: right;">0.7902</td>
+<td style="text-align: right;">0.0184</td>
+<td style="text-align: right;">0.6949</td>
+<td style="text-align: right;">0.8474</td>
+</tr>
+<tr>
+<td style="text-align: right;">9,992</td>
+<td>Medieval Architecture and Archaeology</td>
+<td>Social Sciences</td>
+<td>Arts and Humanities</td>
+<td>Archeology</td>
+<td style="text-align: right;">0.7744</td>
+<td style="text-align: right;">0.7774</td>
+<td style="text-align: right;">0.0088</td>
+<td style="text-align: right;">0.7112</td>
+<td style="text-align: right;">0.8317</td>
+</tr>
+<tr>
+<td style="text-align: right;">9,723</td>
+<td>Ecology, Conservation, and Geographical Studies</td>
+<td>Physical Sciences</td>
+<td>Environmental Science</td>
+<td>Nature and Landscape Conservation</td>
+<td style="text-align: right;">0.8069</td>
+<td style="text-align: right;">0.8112</td>
+<td style="text-align: right;">0.0156</td>
+<td style="text-align: right;">0.7268</td>
+<td style="text-align: right;">0.8531</td>
+</tr>
+<tr>
+<td style="text-align: right;">9,504</td>
+<td>EFL/ESL Teaching and Learning</td>
+<td>Social Sciences</td>
+<td>Arts and Humanities</td>
+<td>Language and Linguistics</td>
+<td style="text-align: right;">0.8059</td>
+<td style="text-align: right;">0.8061</td>
+<td style="text-align: right;">0.0169</td>
+<td style="text-align: right;">0.7398</td>
+<td style="text-align: right;">0.8721</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1b-primary-topic-20">1b. Primary Topic 下位 20 件：階層情報とスコア分布</h2>
+<blockquote>
+<p>各 Topic の OpenAlex 階層（Domain / Field / Subfield）とスコア統計量（件数・平均・中央値・標準偏差・最小・最大）。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">件数</th>
+<th>Topic</th>
+<th>Domain</th>
+<th>Field</th>
+<th>Subfield</th>
+<th style="text-align: right;">平均</th>
+<th style="text-align: right;">中央値</th>
+<th style="text-align: right;">標準偏差</th>
+<th style="text-align: right;">最小</th>
+<th style="text-align: right;">最大</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">1</td>
+<td>Scientific Research Methodologies and Applications</td>
+<td>Physical Sciences</td>
+<td>Environmental Science</td>
+<td>Water Science and Technology</td>
+<td style="text-align: right;">0.7761</td>
+<td style="text-align: right;">0.7761</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">0.7761</td>
+<td style="text-align: right;">0.7761</td>
+</tr>
+<tr>
+<td style="text-align: right;">1</td>
+<td>Graphene and Nanomaterials Applications</td>
+<td>Physical Sciences</td>
+<td>Engineering</td>
+<td>Biomedical Engineering</td>
+<td style="text-align: right;">0.8002</td>
+<td style="text-align: right;">0.8002</td>
+<td style="text-align: right;">0.0000</td>
+<td style="text-align: right;">0.8002</td>
+<td style="text-align: right;">0.8002</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Nanowire Synthesis and Applications</td>
+<td>Physical Sciences</td>
+<td>Engineering</td>
+<td>Biomedical Engineering</td>
+<td style="text-align: right;">0.8291</td>
+<td style="text-align: right;">0.8291</td>
+<td style="text-align: right;">0.0091</td>
+<td style="text-align: right;">0.8226</td>
+<td style="text-align: right;">0.8355</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Agricultural and Biological Research</td>
+<td>Life Sciences</td>
+<td>Agricultural and Biological Sciences</td>
+<td>Food Science</td>
+<td style="text-align: right;">0.8344</td>
+<td style="text-align: right;">0.8344</td>
+<td style="text-align: right;">0.0317</td>
+<td style="text-align: right;">0.8120</td>
+<td style="text-align: right;">0.8568</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Bioeconomy and Sustainability Development</td>
+<td>Life Sciences</td>
+<td>Agricultural and Biological Sciences</td>
+<td>General Agricultural and Biological Sciences</td>
+<td style="text-align: right;">0.8253</td>
+<td style="text-align: right;">0.8253</td>
+<td style="text-align: right;">0.0056</td>
+<td style="text-align: right;">0.8213</td>
+<td style="text-align: right;">0.8292</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Race, Genetics, and Society</td>
+<td>Life Sciences</td>
+<td>Biochemistry, Genetics and Molecular Biology</td>
+<td>Genetics</td>
+<td style="text-align: right;">0.8092</td>
+<td style="text-align: right;">0.8092</td>
+<td style="text-align: right;">0.0288</td>
+<td style="text-align: right;">0.7888</td>
+<td style="text-align: right;">0.8296</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Cultural, Linguistic, Economic Studies</td>
+<td>Social Sciences</td>
+<td>Social Sciences</td>
+<td>General Social Sciences</td>
+<td style="text-align: right;">0.7933</td>
+<td style="text-align: right;">0.7933</td>
+<td style="text-align: right;">0.0240</td>
+<td style="text-align: right;">0.7763</td>
+<td style="text-align: right;">0.8102</td>
+</tr>
+<tr>
+<td style="text-align: right;">2</td>
+<td>Supercapacitor Materials and Fabrication</td>
+<td>Physical Sciences</td>
+<td>Materials Science</td>
+<td>Electronic, Optical and Magnetic Materials</td>
+<td style="text-align: right;">0.8396</td>
+<td style="text-align: right;">0.8396</td>
+<td style="text-align: right;">0.0039</td>
+<td style="text-align: right;">0.8368</td>
+<td style="text-align: right;">0.8423</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Sociology and Education in Brazil</td>
+<td>Social Sciences</td>
+<td>Social Sciences</td>
+<td>Sociology and Political Science</td>
+<td style="text-align: right;">0.7909</td>
+<td style="text-align: right;">0.7892</td>
+<td style="text-align: right;">0.0080</td>
+<td style="text-align: right;">0.7839</td>
+<td style="text-align: right;">0.7996</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Wireless Sensor Networks for Data Analysis</td>
+<td>Physical Sciences</td>
+<td>Computer Science</td>
+<td>Computer Networks and Communications</td>
+<td style="text-align: right;">0.8366</td>
+<td style="text-align: right;">0.8340</td>
+<td style="text-align: right;">0.0226</td>
+<td style="text-align: right;">0.8154</td>
+<td style="text-align: right;">0.8603</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Water and Wastewater Treatment</td>
+<td>Physical Sciences</td>
+<td>Engineering</td>
+<td>Computational Mechanics</td>
+<td style="text-align: right;">0.8177</td>
+<td style="text-align: right;">0.8042</td>
+<td style="text-align: right;">0.0312</td>
+<td style="text-align: right;">0.7956</td>
+<td style="text-align: right;">0.8534</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Quantum Dots Synthesis And Properties</td>
+<td>Physical Sciences</td>
+<td>Materials Science</td>
+<td>Materials Chemistry</td>
+<td style="text-align: right;">0.8151</td>
+<td style="text-align: right;">0.8240</td>
+<td style="text-align: right;">0.0179</td>
+<td style="text-align: right;">0.7945</td>
+<td style="text-align: right;">0.8268</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Structural mechanics and materials</td>
+<td>Physical Sciences</td>
+<td>Materials Science</td>
+<td>Materials Chemistry</td>
+<td style="text-align: right;">0.7968</td>
+<td style="text-align: right;">0.8100</td>
+<td style="text-align: right;">0.0327</td>
+<td style="text-align: right;">0.7596</td>
+<td style="text-align: right;">0.8208</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Technology and Security Systems</td>
+<td>Physical Sciences</td>
+<td>Computer Science</td>
+<td>Information Systems</td>
+<td style="text-align: right;">0.8197</td>
+<td style="text-align: right;">0.8249</td>
+<td style="text-align: right;">0.0101</td>
+<td style="text-align: right;">0.8080</td>
+<td style="text-align: right;">0.8261</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Philosophy and Phenomenology Studies</td>
+<td>Social Sciences</td>
+<td>Social Sciences</td>
+<td>General Social Sciences</td>
+<td style="text-align: right;">0.8319</td>
+<td style="text-align: right;">0.8347</td>
+<td style="text-align: right;">0.0288</td>
+<td style="text-align: right;">0.8018</td>
+<td style="text-align: right;">0.8592</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Plant nutrient uptake and metabolism</td>
+<td>Life Sciences</td>
+<td>Agricultural and Biological Sciences</td>
+<td>Plant Science</td>
+<td style="text-align: right;">0.8197</td>
+<td style="text-align: right;">0.8159</td>
+<td style="text-align: right;">0.0111</td>
+<td style="text-align: right;">0.8111</td>
+<td style="text-align: right;">0.8322</td>
+</tr>
+<tr>
+<td style="text-align: right;">3</td>
+<td>Leech Biology and Applications</td>
+<td>Health Sciences</td>
+<td>Medicine</td>
+<td>Pharmacology</td>
+<td style="text-align: right;">0.8265</td>
+<td style="text-align: right;">0.8234</td>
+<td style="text-align: right;">0.0072</td>
+<td style="text-align: right;">0.8213</td>
+<td style="text-align: right;">0.8347</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td>Phytochemical compounds biological activities</td>
+<td>Life Sciences</td>
+<td>Biochemistry, Genetics and Molecular Biology</td>
+<td>Molecular Biology</td>
+<td style="text-align: right;">0.8120</td>
+<td style="text-align: right;">0.8058</td>
+<td style="text-align: right;">0.0234</td>
+<td style="text-align: right;">0.7917</td>
+<td style="text-align: right;">0.8448</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td>Nanoparticles: synthesis and applications</td>
+<td>Physical Sciences</td>
+<td>Materials Science</td>
+<td>Materials Chemistry</td>
+<td style="text-align: right;">0.8324</td>
+<td style="text-align: right;">0.8354</td>
+<td style="text-align: right;">0.0224</td>
+<td style="text-align: right;">0.8026</td>
+<td style="text-align: right;">0.8562</td>
+</tr>
+<tr>
+<td style="text-align: right;">4</td>
+<td>Covalent Organic Framework Applications</td>
+<td>Physical Sciences</td>
+<td>Materials Science</td>
+<td>Materials Chemistry</td>
+<td style="text-align: right;">0.8155</td>
+<td style="text-align: right;">0.8148</td>
+<td style="text-align: right;">0.0037</td>
+<td style="text-align: right;">0.8117</td>
+<td style="text-align: right;">0.8204</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-subfield-30-subfield">2. SubField 単位のスコア分布（件数上位 30 SubField）</h2>
+<blockquote>
+<p>SubField（OpenAlex タクソノミー第 3 階層）ごとのスコア統計量。件数上位 30 を表示。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">件数</th>
+<th>SubField</th>
+<th style="text-align: right;">平均</th>
+<th style="text-align: right;">中央値</th>
+<th style="text-align: right;">標準偏差</th>
+<th style="text-align: right;">最小</th>
+<th style="text-align: right;">最大</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">140,698</td>
+<td>Sociology and Political Science</td>
+<td style="text-align: right;">0.7884</td>
+<td style="text-align: right;">0.7885</td>
+<td style="text-align: right;">0.0201</td>
+<td style="text-align: right;">0.6997</td>
+<td style="text-align: right;">0.8820</td>
+</tr>
+<tr>
+<td style="text-align: right;">117,821</td>
+<td>Education</td>
+<td style="text-align: right;">0.8004</td>
+<td style="text-align: right;">0.8011</td>
+<td style="text-align: right;">0.0182</td>
+<td style="text-align: right;">0.7075</td>
+<td style="text-align: right;">0.8885</td>
+</tr>
+<tr>
+<td style="text-align: right;">72,353</td>
+<td>Surgery</td>
+<td style="text-align: right;">0.8016</td>
+<td style="text-align: right;">0.8080</td>
+<td style="text-align: right;">0.0251</td>
+<td style="text-align: right;">0.7005</td>
+<td style="text-align: right;">0.8977</td>
+</tr>
+<tr>
+<td style="text-align: right;">71,318</td>
+<td>Genetics</td>
+<td style="text-align: right;">0.7944</td>
+<td style="text-align: right;">0.7990</td>
+<td style="text-align: right;">0.0254</td>
+<td style="text-align: right;">0.7007</td>
+<td style="text-align: right;">0.8787</td>
+</tr>
+<tr>
+<td style="text-align: right;">64,035</td>
+<td>Nature and Landscape Conservation</td>
+<td style="text-align: right;">0.7901</td>
+<td style="text-align: right;">0.7904</td>
+<td style="text-align: right;">0.0216</td>
+<td style="text-align: right;">0.6934</td>
+<td style="text-align: right;">0.8748</td>
+</tr>
+<tr>
+<td style="text-align: right;">56,819</td>
+<td>Political Science and International Relations</td>
+<td style="text-align: right;">0.7898</td>
+<td style="text-align: right;">0.7899</td>
+<td style="text-align: right;">0.0188</td>
+<td style="text-align: right;">0.6923</td>
+<td style="text-align: right;">0.8782</td>
+</tr>
+<tr>
+<td style="text-align: right;">55,138</td>
+<td>Molecular Biology</td>
+<td style="text-align: right;">0.8014</td>
+<td style="text-align: right;">0.8050</td>
+<td style="text-align: right;">0.0225</td>
+<td style="text-align: right;">0.6904</td>
+<td style="text-align: right;">0.8965</td>
+</tr>
+<tr>
+<td style="text-align: right;">52,507</td>
+<td>Social Psychology</td>
+<td style="text-align: right;">0.7948</td>
+<td style="text-align: right;">0.7963</td>
+<td style="text-align: right;">0.0205</td>
+<td style="text-align: right;">0.6949</td>
+<td style="text-align: right;">0.8742</td>
+</tr>
+<tr>
+<td style="text-align: right;">52,492</td>
+<td>Mechanical Engineering</td>
+<td style="text-align: right;">0.8008</td>
+<td style="text-align: right;">0.8031</td>
+<td style="text-align: right;">0.0185</td>
+<td style="text-align: right;">0.7170</td>
+<td style="text-align: right;">0.8745</td>
+</tr>
+<tr>
+<td style="text-align: right;">47,468</td>
+<td>Electrical and Electronic Engineering</td>
+<td style="text-align: right;">0.8004</td>
+<td style="text-align: right;">0.8020</td>
+<td style="text-align: right;">0.0188</td>
+<td style="text-align: right;">0.7017</td>
+<td style="text-align: right;">0.8836</td>
+</tr>
+<tr>
+<td style="text-align: right;">47,286</td>
+<td>Management, Monitoring, Policy and Law</td>
+<td style="text-align: right;">0.7807</td>
+<td style="text-align: right;">0.7788</td>
+<td style="text-align: right;">0.0209</td>
+<td style="text-align: right;">0.6962</td>
+<td style="text-align: right;">0.8756</td>
+</tr>
+<tr>
+<td style="text-align: right;">43,778</td>
+<td>Economics and Econometrics</td>
+<td style="text-align: right;">0.7937</td>
+<td style="text-align: right;">0.7935</td>
+<td style="text-align: right;">0.0183</td>
+<td style="text-align: right;">0.6937</td>
+<td style="text-align: right;">0.8808</td>
+</tr>
+<tr>
+<td style="text-align: right;">41,846</td>
+<td>Philosophy</td>
+<td style="text-align: right;">0.7807</td>
+<td style="text-align: right;">0.7803</td>
+<td style="text-align: right;">0.0192</td>
+<td style="text-align: right;">0.6941</td>
+<td style="text-align: right;">0.8674</td>
+</tr>
+<tr>
+<td style="text-align: right;">39,699</td>
+<td>Literature and Literary Theory</td>
+<td style="text-align: right;">0.7800</td>
+<td style="text-align: right;">0.7791</td>
+<td style="text-align: right;">0.0202</td>
+<td style="text-align: right;">0.6953</td>
+<td style="text-align: right;">0.8765</td>
+</tr>
+<tr>
+<td style="text-align: right;">36,417</td>
+<td>Artificial Intelligence</td>
+<td style="text-align: right;">0.7943</td>
+<td style="text-align: right;">0.7960</td>
+<td style="text-align: right;">0.0206</td>
+<td style="text-align: right;">0.7171</td>
+<td style="text-align: right;">0.8816</td>
+</tr>
+<tr>
+<td style="text-align: right;">35,741</td>
+<td>Information Systems</td>
+<td style="text-align: right;">0.7968</td>
+<td style="text-align: right;">0.8006</td>
+<td style="text-align: right;">0.0207</td>
+<td style="text-align: right;">0.7172</td>
+<td style="text-align: right;">0.8667</td>
+</tr>
+<tr>
+<td style="text-align: right;">34,147</td>
+<td>Cultural Studies</td>
+<td style="text-align: right;">0.7875</td>
+<td style="text-align: right;">0.7879</td>
+<td style="text-align: right;">0.0187</td>
+<td style="text-align: right;">0.7033</td>
+<td style="text-align: right;">0.8696</td>
+</tr>
+<tr>
+<td style="text-align: right;">33,090</td>
+<td>Public Health, Environmental and Occupational Health</td>
+<td style="text-align: right;">0.8002</td>
+<td style="text-align: right;">0.7989</td>
+<td style="text-align: right;">0.0186</td>
+<td style="text-align: right;">0.7196</td>
+<td style="text-align: right;">0.8817</td>
+</tr>
+<tr>
+<td style="text-align: right;">32,988</td>
+<td>Pulmonary and Respiratory Medicine</td>
+<td style="text-align: right;">0.8048</td>
+<td style="text-align: right;">0.8117</td>
+<td style="text-align: right;">0.0262</td>
+<td style="text-align: right;">0.7128</td>
+<td style="text-align: right;">0.8979</td>
+</tr>
+<tr>
+<td style="text-align: right;">30,921</td>
+<td>Materials Chemistry</td>
+<td style="text-align: right;">0.8039</td>
+<td style="text-align: right;">0.8069</td>
+<td style="text-align: right;">0.0199</td>
+<td style="text-align: right;">0.7117</td>
+<td style="text-align: right;">0.8805</td>
+</tr>
+<tr>
+<td style="text-align: right;">30,496</td>
+<td>Clinical Psychology</td>
+<td style="text-align: right;">0.7981</td>
+<td style="text-align: right;">0.7996</td>
+<td style="text-align: right;">0.0208</td>
+<td style="text-align: right;">0.7166</td>
+<td style="text-align: right;">0.8781</td>
+</tr>
+<tr>
+<td style="text-align: right;">29,119</td>
+<td>Law</td>
+<td style="text-align: right;">0.7864</td>
+<td style="text-align: right;">0.7865</td>
+<td style="text-align: right;">0.0177</td>
+<td style="text-align: right;">0.7086</td>
+<td style="text-align: right;">0.8661</td>
+</tr>
+<tr>
+<td style="text-align: right;">28,494</td>
+<td>Plant Science</td>
+<td style="text-align: right;">0.7912</td>
+<td style="text-align: right;">0.7949</td>
+<td style="text-align: right;">0.0249</td>
+<td style="text-align: right;">0.7072</td>
+<td style="text-align: right;">0.8880</td>
+</tr>
+<tr>
+<td style="text-align: right;">26,785</td>
+<td>Language and Linguistics</td>
+<td style="text-align: right;">0.8000</td>
+<td style="text-align: right;">0.8009</td>
+<td style="text-align: right;">0.0185</td>
+<td style="text-align: right;">0.7127</td>
+<td style="text-align: right;">0.8820</td>
+</tr>
+<tr>
+<td style="text-align: right;">25,686</td>
+<td>Developmental and Educational Psychology</td>
+<td style="text-align: right;">0.8041</td>
+<td style="text-align: right;">0.8047</td>
+<td style="text-align: right;">0.0170</td>
+<td style="text-align: right;">0.7123</td>
+<td style="text-align: right;">0.8793</td>
+</tr>
+<tr>
+<td style="text-align: right;">25,437</td>
+<td>Biomedical Engineering</td>
+<td style="text-align: right;">0.8024</td>
+<td style="text-align: right;">0.8052</td>
+<td style="text-align: right;">0.0202</td>
+<td style="text-align: right;">0.7215</td>
+<td style="text-align: right;">0.8860</td>
+</tr>
+<tr>
+<td style="text-align: right;">23,435</td>
+<td>Civil and Structural Engineering</td>
+<td style="text-align: right;">0.8041</td>
+<td style="text-align: right;">0.8060</td>
+<td style="text-align: right;">0.0207</td>
+<td style="text-align: right;">0.7226</td>
+<td style="text-align: right;">0.8859</td>
+</tr>
+<tr>
+<td style="text-align: right;">23,228</td>
+<td>Aerospace Engineering</td>
+<td style="text-align: right;">0.8035</td>
+<td style="text-align: right;">0.8048</td>
+<td style="text-align: right;">0.0169</td>
+<td style="text-align: right;">0.7048</td>
+<td style="text-align: right;">0.8734</td>
+</tr>
+<tr>
+<td style="text-align: right;">22,128</td>
+<td>Archeology</td>
+<td style="text-align: right;">0.7791</td>
+<td style="text-align: right;">0.7774</td>
+<td style="text-align: right;">0.0164</td>
+<td style="text-align: right;">0.7112</td>
+<td style="text-align: right;">0.8631</td>
+</tr>
+<tr>
+<td style="text-align: right;">21,482</td>
+<td>History</td>
+<td style="text-align: right;">0.7791</td>
+<td style="text-align: right;">0.7792</td>
+<td style="text-align: right;">0.0196</td>
+<td style="text-align: right;">0.6802</td>
+<td style="text-align: right;">0.8680</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-30">3. 入力情報の質によるスコア比較（閾値：タイトル 30 文字）</h2>
+<blockquote>
+<p>各 Work を「要旨の有無」×「タイトルの長短」の 4 パターンに分けてスコア分布を比較。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>パターン</th>
+<th style="text-align: center;">要旨</th>
+<th style="text-align: center;">タイトル</th>
+<th style="text-align: right;">件数</th>
+<th style="text-align: right;">平均</th>
+<th style="text-align: right;">中央値</th>
+<th style="text-align: right;">標準偏差</th>
+<th style="text-align: right;">最小</th>
+<th style="text-align: right;">最大</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>パターン A</td>
+<td style="text-align: center;">あり</td>
+<td style="text-align: center;">長 (&gt;30字)</td>
+<td style="text-align: right;">260,647</td>
+<td style="text-align: right;">0.8123</td>
+<td style="text-align: right;">0.8142</td>
+<td style="text-align: right;">0.0178</td>
+<td style="text-align: right;">0.7340</td>
+<td style="text-align: right;">0.8937</td>
+</tr>
+<tr>
+<td>パターン B</td>
+<td style="text-align: center;">あり</td>
+<td style="text-align: center;">短 (≤30字)</td>
+<td style="text-align: right;">207,704</td>
+<td style="text-align: right;">0.8088</td>
+<td style="text-align: right;">0.8111</td>
+<td style="text-align: right;">0.0189</td>
+<td style="text-align: right;">0.7185</td>
+<td style="text-align: right;">0.8965</td>
+</tr>
+<tr>
+<td>パターン C</td>
+<td style="text-align: center;">なし</td>
+<td style="text-align: center;">長 (&gt;30字)</td>
+<td style="text-align: right;">873,288</td>
+<td style="text-align: right;">0.8009</td>
+<td style="text-align: right;">0.8026</td>
+<td style="text-align: right;">0.0193</td>
+<td style="text-align: right;">0.7010</td>
+<td style="text-align: right;">0.9038</td>
+</tr>
+<tr>
+<td>パターン D</td>
+<td style="text-align: center;">なし</td>
+<td style="text-align: center;">短 (≤30字)</td>
+<td style="text-align: right;">1,157,837</td>
+<td style="text-align: right;">0.7868</td>
+<td style="text-align: right;">0.7874</td>
+<td style="text-align: right;">0.0209</td>
+<td style="text-align: right;">0.6802</td>
+<td style="text-align: right;">0.8921</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>解釈のポイント：</strong> 要旨あり・長タイトルのパターン A が最も高スコアになることが期待されます。パターン D（要旨なし・短タイトル）との差が大きい場合、入力情報の質がスコアに有意な影響を与えていることを示します。</p>
+</blockquote>
+<h2 id="4">4. スコア帯の件率（品質レポート補完）</h2>
+<blockquote>
+<p><code>quality-report-full.md</code> で空欄だった「本データの件率」を補完。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>スコア帯</th>
+<th>解釈</th>
+<th style="text-align: right;">件数</th>
+<th style="text-align: right;">件率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.85 以上</td>
+<td>非常に強いマッチ</td>
+<td style="text-align: right;">9,835</td>
+<td style="text-align: right;"><strong>0.4 %</strong></td>
+</tr>
+<tr>
+<td>0.80〜0.85</td>
+<td>強いマッチ（上位層）</td>
+<td style="text-align: right;">1,165,105</td>
+<td style="text-align: right;"><strong>46.6 %</strong></td>
+</tr>
+<tr>
+<td>0.75〜0.80</td>
+<td>強いマッチ（主要分布帯）</td>
+<td style="text-align: right;">1,267,474</td>
+<td style="text-align: right;"><strong>50.7 %</strong></td>
+</tr>
+<tr>
+<td>0.70〜0.75</td>
+<td>中程度のマッチ</td>
+<td style="text-align: right;">57,027</td>
+<td style="text-align: right;"><strong>2.3 %</strong></td>
+</tr>
+<tr>
+<td>0.65〜0.70</td>
+<td>弱めのマッチ</td>
+<td style="text-align: right;">35</td>
+<td style="text-align: right;"><strong>0.0 %</strong></td>
+</tr>
+<tr>
+<td>0.65 未満</td>
+<td>弱いマッチ</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;"><strong>0.0 %</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="5">5. 全件スコア統計（再掲）</h2>
+<table>
+<thead>
+<tr>
+<th>統計量</th>
+<th>値</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>n</td>
+<td>2,499,476</td>
+</tr>
+<tr>
+<td>mean</td>
+<td>0.7962</td>
+</tr>
+<tr>
+<td>median</td>
+<td>0.7983</td>
+</tr>
+<tr>
+<td>std</td>
+<td>0.0220</td>
+</tr>
+<tr>
+<td>min</td>
+<td>0.6802</td>
+</tr>
+<tr>
+<td>max</td>
+<td>0.9038</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><em>本レポートは <code>scripts/deep_analysis.py</code> により自動生成されました。</em></p>
+</body>
+</html>
