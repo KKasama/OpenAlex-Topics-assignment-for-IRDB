@@ -3,20 +3,21 @@
 Build a side-by-side comparison between the existing OpenAlex Topic
 assignment and the Topic re-assignment produced by this project.
 
-Reads the local ``topics-1k-multi.jsonl``, picks a sample of work IDs,
-fetches each Work's existing ``primary_topic`` / ``topics`` from
-OpenAlex, and emits a Markdown + CSV table for inclusion in
+Reads the local topics JSONL, picks a sample of work IDs that have
+Japanese titles, fetches each Work's existing ``primary_topic`` / ``topics``
+from OpenAlex, and emits a Markdown + CSV table for inclusion in
 reports / cover letters.
 
 Usage
 -----
     export OPENALEX_API_KEY=...        # optional, Premium tier
     python scripts/build_comparison.py \
-        --input  data/topics-1k-multi.jsonl \
+        --input    data/topics-irdb-ja-multi.jsonl \
+        --works-in data/works-irdb-ja.jsonl \
         --sample 10 \
         --mailto your@example.org \
-        --out-md  docs/comparison-1k.md \
-        --out-csv docs/comparison-1k.csv
+        --out-md  docs/comparison-ja.md \
+        --out-csv docs/comparison-ja.csv
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 import time
 import urllib.parse
@@ -33,10 +35,16 @@ from pathlib import Path
 
 OPENALEX_BASE = "https://api.openalex.org/works"
 
+# 日本語文字（ひらがな・カタカナ・CJK統合漢字）を含むか判定
+_JP_RE = re.compile(r'[぀-ゟ゠-ヿ一-鿿]')
+
+
+def is_japanese_title(title: str) -> bool:
+    return bool(_JP_RE.search(title or ""))
+
 
 def fetch_work(work_url: str, mailto: str, api_key: str | None) -> dict:
     """Fetch a single Work record. Returns the JSON dict."""
-    # work_url ends with "/W..." — extract the bare ID
     work_id = work_url.rstrip("/").split("/")[-1]
     params = {
         "select": "id,display_name,primary_topic,topics",
@@ -63,25 +71,44 @@ def short(s: str, n: int = 60) -> str:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--input", default="data/topics-1k-multi.jsonl")
+    p.add_argument("--input",    default="data/topics-irdb-ja-multi.jsonl")
+    p.add_argument("--works-in", default="data/works-irdb-ja.jsonl",
+                   help="元の Works JSONL（タイトル取得・日本語フィルタ用）")
     p.add_argument("--sample", type=int, default=10)
     p.add_argument("--mailto", required=True)
-    p.add_argument("--out-md", default="docs/comparison-1k.md")
-    p.add_argument("--out-csv", default="docs/comparison-1k.csv")
+    p.add_argument("--out-md",  default="docs/comparison-ja.md")
+    p.add_argument("--out-csv", default="docs/comparison-ja.csv")
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
 
     api_key = os.environ.get("OPENALEX_API_KEY")
 
-    # Load our results.
-    with open(args.input) as f:
-        ours = [json.loads(line) for line in f]
-    print(f"Loaded {len(ours):,} records from {args.input}", file=sys.stderr)
+    # ── Works メタデータ（タイトル）を読み込む ──────────────────
+    print(f"Loading works titles from {args.works_in} ...", file=sys.stderr)
+    work_titles: dict[str, str] = {}
+    with open(args.works_in, encoding="utf-8") as f:
+        for line in f:
+            w = json.loads(line)
+            work_titles[w["id"]] = w.get("title") or ""
+    print(f"  Loaded {len(work_titles):,} works", file=sys.stderr)
 
-    # Sample.
+    # ── 本手法の結果を読み込み、日本語タイトルのみに絞る ────────
+    print(f"Loading topic assignments from {args.input} ...", file=sys.stderr)
+    ours_all: list[dict] = []
+    with open(args.input, encoding="utf-8") as f:
+        for line in f:
+            ours_all.append(json.loads(line))
+
+    ours_ja = [
+        rec for rec in ours_all
+        if is_japanese_title(work_titles.get(rec["work_id"], ""))
+    ]
+    print(f"  Total: {len(ours_all):,} / Japanese-title: {len(ours_ja):,}", file=sys.stderr)
+
+    # ── サンプリング ─────────────────────────────────────────────
     rnd = random.Random(args.seed)
-    picks = rnd.sample(ours, min(args.sample, len(ours)))
-    print(f"Sampling {len(picks)} works for comparison", file=sys.stderr)
+    picks = rnd.sample(ours_ja, min(args.sample, len(ours_ja)))
+    print(f"Sampling {len(picks)} Japanese-title works for comparison", file=sys.stderr)
 
     rows: list[dict] = []
     for i, rec in enumerate(picks, 1):
@@ -105,7 +132,8 @@ def main() -> None:
 
         rows.append({
             "work_id": work_id,
-            "title": w.get("display_name", ""),
+            "title_ja": work_titles.get(work_id, ""),          # 日本語タイトル
+            "title_en": w.get("display_name", ""),             # OpenAlex 表示名
             "existing_primary": existing_primary,
             "existing_topic_2": existing_topics[1],
             "existing_topic_3": existing_topics[2],
@@ -128,9 +156,9 @@ def main() -> None:
     # Write Markdown.
     Path(args.out_md).parent.mkdir(parents=True, exist_ok=True)
     md_lines: list[str] = []
-    md_lines.append("# 改善比較表（既存 OpenAlex vs 本手法、1,000 件サンプルから抜粋）")
+    md_lines.append("# 改善比較表（既存 OpenAlex vs 本手法、日本語論文サンプル）")
     md_lines.append("")
-    md_lines.append(f"**サンプル件数：** {len(rows)} 件（無作為抽出、seed={args.seed}）")
+    md_lines.append(f"**サンプル件数：** {len(rows)} 件（日本語タイトル論文から無作為抽出、seed={args.seed}）")
     md_lines.append("")
     n_changed = sum(1 for r in rows if r["primary_changed"])
     md_lines.append(f"**primary_topic が変わった件数：** {n_changed} / {len(rows)} 件")
@@ -138,9 +166,14 @@ def main() -> None:
     md_lines.append("---")
     md_lines.append("")
     for i, r in enumerate(rows, 1):
-        md_lines.append(f"## {i}. {short(r['title'], 80)}")
+        # タイトル：日本語タイトルを優先表示
+        display_title = r["title_ja"] or r["title_en"] or r["work_id"]
+        md_lines.append(f"## {i}. {short(display_title, 80)}")
         md_lines.append("")
         md_lines.append(f"- **Work ID:** [{r['work_id']}]({r['work_id']})")
+        if r["title_ja"] and r["title_en"] and r["title_ja"] != r["title_en"]:
+            md_lines.append(f"- **タイトル（日）：** {short(r['title_ja'], 100)}")
+            md_lines.append(f"- **Title (EN)：** {short(r['title_en'], 100)}")
         md_lines.append("")
         md_lines.append("| | 既存 OpenAlex | 本手法 |")
         md_lines.append("|---|---|---|")
