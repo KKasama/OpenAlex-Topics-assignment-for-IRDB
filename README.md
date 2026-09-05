@@ -1,3 +1,6 @@
+> [!WARNING]
+> **このリポジトリは v1（アーカイブ版）です。最新版の v2（アンサンブル版：埋め込み + BM25）は [OpenAlex-Topics-assignment-for-IRDB2](https://github.com/KKasama/OpenAlex-Topics-assignment-for-IRDB2) をご利用ください。**
+
 # OpenAlex Topics Assignment for IRDB
 
 A tool to improve Topic assignments for Japanese bibliographic records (IRDB) ingested into OpenAlex, using embedding-based matching and NDC code mapping.
